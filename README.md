@@ -98,8 +98,6 @@ Privacy Policy for DevInks
 
 DevInks does not collect, store, or transmit any personal data or user information. All data, including notes created using this extension, is stored locally on the user's device using IndexedDB. No information is sent to external servers or shared with third parties.
 
-If you have any questions about this policy, please contact us at [cse210.fa24.group14@gmail.com](mailto:cse210.fa24.group14@gmail.com).
-
 
 ---
 
