@@ -1,4 +1,4 @@
-import { parseMarkdown } from '../../src/js/markdownRules';
+import { parseMarkdown } from '../../src/js/utils/markdownRules.js';
 
 describe('Util ParseMarkdown', () => {
   test('should not parse empty string', () => {
