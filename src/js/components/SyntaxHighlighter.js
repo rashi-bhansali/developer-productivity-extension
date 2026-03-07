@@ -1,14 +1,6 @@
 /* eslint-disable no-useless-escape */
 /** Escape text so it is safe to inject into HTML (e.g. innerHTML). */
-const escapeHtml = (str) => {
-  if (str == null || typeof str !== 'string') return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-};
+
 const syntaxRules = {
   python: {
     patterns: {
@@ -24,6 +16,16 @@ const syntaxRules = {
       function: /\b[a-zA-Z_]\w*(?=\s*\()/,
     },
   },
+};
+
+const escapeHtml = (str) => {
+  if (str == null || typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 };
 
 
@@ -121,20 +123,48 @@ const checkPythonSyntax = (code) => {
   const errors = [];
   const lines = code.split('\n');
 
-  lines.forEach((line, index) => {
-    const trimmedLine = line.trim();
+  // Very small “symbol table” for this snippet
+  const keywords = new Set([
+    'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif',
+    'else', 'except', 'False', 'finally', 'for', 'from', 'global', 'if',
+    'import', 'in', 'is', 'lambda', 'None', 'nonlocal', 'not', 'or', 'pass',
+    'raise', 'return', 'True', 'try', 'while', 'with', 'yield',
+  ]);
+  const builtins = new Set([
+    'print', 'len', 'range', 'type', 'int', 'str', 'float', 'list', 'dict',
+    'set', 'tuple', 'sum', 'min', 'max', 'abs', 'round', 'input',
+  ]);
 
-    // Indentation check
+  // Scope tracking for variable visibility
+  const scopes = [{ indent: 0, names: new Set() }];
+  const currentScope = () => scopes[scopes.length - 1];
+
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    const trimmedLine = line.trim();
+    if(!trimmedLine || trimmedLine.startsWith('#')) return; //skip blank lines or comment-only lines
+    
+    let hasMissingQuoteError = false;
     const indentationLevel = line.length - line.trimLeft().length;
+    // Adjust scope stack based on indentation
+    while (scopes.length > 1 && indentationLevel < currentScope().indent) {
+      scopes.pop();
+    }
+    if (indentationLevel > currentScope().indent) {
+      scopes.push({ indent: indentationLevel, names: new Set() });
+    }
+
+    //1. Indentation check
     if (trimmedLine && indentationLevel % 4 !== 0) {
       errors.push({
         message: 'Inconsistent indentation (should be multiples of 4 spaces)',
-        line: index + 1,
+        line: lineNumber,
         column: 0,
       });
     }
 
-    // Colon check for control structures
+    //2. Colon check for control structures
     const colonRequiredKeywords = [
       'def',
       'class',
@@ -143,6 +173,9 @@ const checkPythonSyntax = (code) => {
       'elif',
       'for',
       'while',
+      'try',
+      'except',
+      'finally',
     ];
     const needsColon = colonRequiredKeywords.some((keyword) =>
       trimmedLine.startsWith(keyword),
@@ -150,12 +183,115 @@ const checkPythonSyntax = (code) => {
     if (needsColon && !trimmedLine.endsWith(':')) {
       errors.push({
         message: 'Missing colon after control structure or definition',
-        line: index + 1,
+        line: lineNumber,
         column: line.length,
       });
     }
-  });
 
+    //3. Variable declaration check
+    const assignMatch = trimmedLine.match(/^([a-zA-Z_]\w*)\s*=/);
+    if (assignMatch) {
+      currentScope().names.add(assignMatch[1]);
+    }
+    // for i in iterable:
+    const forMatch = trimmedLine.match(/^for\s+([a-zA-Z_]\w*)\s+in\b/);
+    if (forMatch) {
+      currentScope().names.add(forMatch[1]);
+    }
+    // def func(a, b):
+    const defMatch = trimmedLine.match(/^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*:/);
+    if (defMatch) {
+      const funcName = defMatch[1];
+      currentScope().names.add(funcName);
+      const argList = defMatch[2]
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s && /^[a-zA-Z_]\w*$/.test(s));
+      argList.forEach((arg) => currentScope().names.add(arg));
+    }
+
+    //4. Missing quotes for literals (assignments and function calls)
+    //Heuristic: one argument, contains whitespace, no comma, and no quotes
+    // 4a. Assignment context: msg = hello world
+    const assignRhsMatch = trimmedLine.match(/^[^#]*=\s*(.+)$/);
+    if (assignRhsMatch) {
+      // Strip off any trailing comment
+      const rhs = assignRhsMatch[1].split('#')[0].trim();
+      const hasQuotes = rhs.includes('"') || rhs.includes("'");
+      // Heuristic: multiple words, only identifiers + spaces, no quotes
+      const wordyLiteral =
+        /^[a-zA-Z_]\w*(\s+[a-zA-Z_]\w*)+$/.test(rhs);
+      if (!hasQuotes && wordyLiteral) {
+        errors.push({
+          message: 'Right-hand side looks like a string literal missing quotes',
+          line: lineNumber,
+          column: line.indexOf(rhs),
+        });
+      }
+    }
+    // 4b. Function-call arguments: foo(hello world)
+    const callRegex = /([a-zA-Z_]\w*)\(([^()]*)\)/g;
+    let callMatch;
+    while ((callMatch = callRegex.exec(trimmedLine)) !== null) {
+      const argsText = callMatch[2];
+      const args = argsText
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean);
+      for (const arg of args) {
+        const hasQuotes = arg.includes('"') || arg.includes("'");
+        const wordyLiteral =
+          /^[a-zA-Z_]\w*(\s+[a-zA-Z_]\w*)+$/.test(arg);
+        if (!hasQuotes && wordyLiteral) {
+          errors.push({
+            message: 'Argument looks like a string literal missing quotes',
+            line: lineNumber,
+            column: trimmedLine.indexOf(arg),
+          });
+          hasMissingQuoteError = true;
+        }
+      }
+    }
+
+    // 5) Possible undefined variables (simple heuristic)
+    if (!hasMissingQuoteError) {       
+        const identifierRegex = /\b[a-zA-Z_]\w*\b/g;
+        
+        // Remove string literals so we don't flag words inside quotes
+        const stringLiteralRegex = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
+        const cleanedForVars = trimmedLine.replace(
+          stringLiteralRegex,
+          (m) => ' '.repeat(m.length),
+        );
+        
+        let match;
+        // To avoid spamming multiple errors on obviously broken lines, we still check,
+        // but you could choose to skip this if you already pushed a “missing quotes” error.
+        while ((match = identifierRegex.exec(cleanedForVars)) !== null) {
+          const name = match[0];
+          // Skip keywords, builtins, and booleans/None
+          if (
+            keywords.has(name) ||
+            builtins.has(name) ||
+            name === 'True' ||
+            name === 'False' ||
+            name === 'None'
+          ) {
+            continue;
+          }
+
+          const isDeclaredSomewhere = scopes.some((scope) => scope.names.has(name),)
+          if (isDeclaredSomewhere) {
+            continue;
+          }
+          errors.push({
+            message: `Possible undefined variable '${name}'`,
+            line: lineNumber,
+            column: match.index,
+          });
+      }
+    }
+  });
   return errors;
 };
 

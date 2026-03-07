@@ -110,7 +110,17 @@ export class NotesView {
       codeTextarea.style.color = 'transparent';
       codeTextarea.placeholder = 'Write your code here...';
       codeTextarea.value = cell.content || '';
+
+
+      // Tooltip functionality
+      const tooltip = document.createElement('div');
+      tooltip.classList.add('code-error-tooltip');
+      tooltip.style.position = 'fixed';
+      tooltip.style.display = 'none';
+      document.body.appendChild(tooltip);
+
       // Function to update syntax highlighting
+      let errorSpans = []; // { el, message }
       const updateSyntaxHighlighting = () => {
         const code = codeTextarea.value;
         //const selectedLanguage = select.value;
@@ -120,6 +130,12 @@ export class NotesView {
         // Sync scroll
         syntaxOverlay.scrollTop = codeTextarea.scrollTop;
         syntaxOverlay.scrollLeft = codeTextarea.scrollLeft;
+
+        // Collect error spans for tooltip logic
+        errorSpans = Array.from(syntaxOverlay.querySelectorAll('.error')).map((el) => ({
+          el,
+          message: el.getAttribute('data-tooltip') || '',
+        }));
       };
 
       // Debounce for syntax highlighting
@@ -188,6 +204,36 @@ export class NotesView {
         }
       });
 
+      //mouseover event listener for error spans (since error checks happen in overlay, tooltip doesn't show up for text area, so explicitly needs to be added)
+      codeTextarea.addEventListener('mousemove', (event) => {
+        const { clientX, clientY } = event;
+        let hit = null;
+        for (const { el, message } of errorSpans) {
+          const rect = el.getBoundingClientRect();
+          if (
+            clientX >= rect.left &&
+            clientX <= rect.right &&
+            clientY >= rect.top &&
+            clientY <= rect.bottom
+          ) {
+            hit = { rect, message };
+            break;
+          }
+        }
+        if (hit) {
+          tooltip.textContent = hit.message;
+          tooltip.style.left = `${hit.rect.left}px`;
+          tooltip.style.top = `${hit.rect.bottom + 4}px`;
+          tooltip.style.display = 'block';
+        } else {
+          tooltip.style.display = 'none';
+        }
+      });
+
+      codeTextarea.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+    
       // Initial syntax highlighting
       updateSyntaxHighlighting();
 

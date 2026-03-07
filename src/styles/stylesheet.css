@@ -538,6 +538,17 @@ textarea.code-editor{
   background-color: rgb(255 0 0 / 5%);
 }
 
+.code-error-tooltip {
+  z-index: 9999;
+  background-color: #f44;
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.2);
+  pointer-events: none; /* tooltip itself doesn’t block mouse */
+}
 
 
 /* Dark mode styles */
