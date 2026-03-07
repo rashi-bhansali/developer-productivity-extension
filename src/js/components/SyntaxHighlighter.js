@@ -1,4 +1,14 @@
 /* eslint-disable no-useless-escape */
+/** Escape text so it is safe to inject into HTML (e.g. innerHTML). */
+const escapeHtml = (str) => {
+  if (str == null || typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
 const syntaxRules = {
   python: {
     patterns: {
@@ -16,32 +26,8 @@ const syntaxRules = {
   },
 };
 
-const initializeSyntaxRules = () => {
-  for (const lang in syntaxRules) {
-    const keywords = syntaxRules[lang].keywords.join('|');
-    syntaxRules[lang].patterns.keyword = new RegExp(`\\b(${keywords})\\b`, 'g');
-  }
-  return syntaxRules;
-};
 
 export const newapplySyntaxHighlighting = (code) => {
-  // Comprehensive syntax rules for Python
-  const syntaxRules = {
-    python: {
-      patterns: {
-        comment: /\s*#.*/,
-        string: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/,
-        keyword:
-          /\b(and|as|assert|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\b/,
-        builtinFunction:
-          /\b(print|len|range|type|int|str|float|list|dict|set|tuple|sum|min|max|abs|round|input)\b/,
-        number: /\b(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?\b/,
-        operator:
-          /(\+|\-|\*|\/|%|\*\*|==|!=|<=|>=|<|>|=|\+=|\-=|\*=|\/=|%=|\*\*=)/,
-        function: /\b[a-zA-Z_]\w*(?=\s*\()/,
-      },
-    },
-  };
 
   // Combine all regex patterns
   const createCombinedRegex = () => {
@@ -66,31 +52,28 @@ export const newapplySyntaxHighlighting = (code) => {
 
     // Check and apply highlighting for different token types
     if (rules.comment.test(match)) {
-      return `<span class="token comment">${match}</span>`;
+      return `<span class="token comment">${escapeHtml(match)}</span>`;
     } else if (rules.string.test(match)) {
-      return `<span class="token string">${match}</span>`;
+      return `<span class="token string">${escapeHtml(match)}</span>`;
     } else if (rules.keyword.test(match)) {
       return `<span class="token keyword">${match}</span>`;
     } else if (rules.builtinFunction.test(match)) {
-      return `<span class="token builtin">${match}</span>`;
+      return `<span class="token builtin">${escapeHtml(match)}</span>`;
     } else if (rules.number.test(match)) {
-      return `<span class="token number">${match}</span>`;
+      return `<span class="token number">${escapeHtml(match)}</span>`;
     } else if (rules.function.test(match)) {
-      return `<span class="token function">${match}</span>`;
+      return `<span class="token function">${escapeHtml(match)}</span>`;
     } else if (rules.operator.test(match)) {
-      return `<span class="token operator">${match}</span>`;
+      return `<span class="token operator">${escapeHtml(match)}</span>`;
     }
 
-    return match;
+    return escapeHtml(match);
   });
 
   return highlightedCode;
 };
 
 export const applySyntaxHighlightingWithErrors = (code, language) => {
-  if (!syntaxRules[language].patterns.keyword) {
-    initializeSyntaxRules();
-  }
   const syntaxHighlightedCode = newapplySyntaxHighlighting(code, language);
   const errors = checkSyntax(code, language);
   const highlightedWithErrors = highlightErrors(syntaxHighlightedCode, errors);
@@ -104,20 +87,9 @@ const checkSyntax = (code, language) => {
     throw new Error(`Unsupported language: ${language}`);
   }
 
-  if (!syntaxRules[language].patterns.keyword) {
-    initializeSyntaxRules();
-  }
 
   const errors = [];
   const rules = syntaxRules[language];
-
-  // Dynamically generate keyword regex if not already created
-  if (!rules.patterns.keyword) {
-    rules.patterns.keyword = new RegExp(
-      `\\b(${rules.keywords.join('|')})\\b`,
-      'g',
-    );
-  }
 
   // Language-specific preprocessing and checks
   switch (language) {
@@ -381,12 +353,13 @@ const commonSyntaxChecks = (code, rules) => {
 const highlightErrors = (code, errors) => {
   const lines = code.split('\n');
   errors.forEach((error) => {
-    const lineIndex = error.line;
-    const line = lines[lineIndex];
+    // error.line is 1-based; convert to 0-based index
+    const lineIndex = error.line - 1;
+    if (lineIndex < 0 || lineIndex >= lines.length) return;
 
-    // Highlight the error on the line
+    const line = lines[lineIndex];
     lines[lineIndex] = line.replace(
-      new RegExp(`(^\\s*)(${line.trim()})`, 'g'),
+      new RegExp(`(^\\s*)(${line.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g'),
       (match, spaces, text) => {
         return `${spaces}<span class="error" data-tooltip="${error.message}">${text}</span>`;
       },

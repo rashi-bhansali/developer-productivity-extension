@@ -1,4 +1,4 @@
-import { newapplySyntaxHighlighting } from './SyntaxHighlighter.js';
+import { applySyntaxHighlightingWithErrors } from './SyntaxHighlighter.js';
 import { parseMarkdown } from '../markdownRules.js';
 import { MarkdownToolBar } from './MarkdownToolBar.js';
 
@@ -100,20 +100,14 @@ export class NotesView {
       // Create container for editor and highlighting
       const editorContainer = document.createElement('div');
       editorContainer.classList.add('editor-container');
-      editorContainer.style.position = 'relative';
       // Create syntax highlighting overlay
       const syntaxOverlay = document.createElement('div');
       syntaxOverlay.classList.add('syntax-overlay');
       // Create textarea
       const codeTextarea = document.createElement('textarea');
       codeTextarea.classList.add('code-editor');
-      codeTextarea.style.position = 'absolute';
       codeTextarea.style.backgroundColor = 'transparent';
       codeTextarea.style.color = 'transparent';
-      codeTextarea.style.caretColor = ' ';
-      codeTextarea.style.lineHeight = '1.5';
-      codeTextarea.style.outline = 'none';
-      codeTextarea.style.overflow = 'auto';
       codeTextarea.placeholder = 'Write your code here...';
       codeTextarea.value = cell.content || '';
       // Function to update syntax highlighting
@@ -121,7 +115,7 @@ export class NotesView {
         const code = codeTextarea.value;
         //const selectedLanguage = select.value;
         // Apply syntax highlighting
-        const highlightedCode = newapplySyntaxHighlighting(code);
+        const highlightedCode = applySyntaxHighlightingWithErrors(code, 'python');
         syntaxOverlay.innerHTML = highlightedCode;
         // Sync scroll
         syntaxOverlay.scrollTop = codeTextarea.scrollTop;
@@ -132,7 +126,7 @@ export class NotesView {
       let debounceTimeout;
       const debouncedHighlighting = () => {
         clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(updateSyntaxHighlighting, 10);
+        debounceTimeout = setTimeout(updateSyntaxHighlighting, 80); //responsive highlighting without running for every keystroke
       };
 
       // Event listeners
