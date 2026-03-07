@@ -215,6 +215,17 @@ body.dark-mode .syntax-overlay {
   border: 1px solid #555;
 }
 
+body.dark-mode .code-editor-header {
+  background-color: #333;
+  border-bottom-color: #555;
+}
+
+body.dark-mode .code-cell-language-select {
+  background-color: #444;
+  border-color: #555;
+  color: #ddd;
+}
+
 body.dark-mode .delete-btn {
   color: #ccc;
 }
@@ -418,6 +429,25 @@ textarea.code-editor{
   width: 100%;
   background-color: '#f4f4f4';
   overflow: hidden;
+}
+
+.code-editor-header {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fafafa;
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.code-cell-language-select {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  cursor: pointer;
+  min-width: 6rem;
 }
 
 .select-wrapper {

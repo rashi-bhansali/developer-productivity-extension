@@ -1,4 +1,4 @@
-import { applySyntaxHighlightingWithErrors } from './SyntaxHighlighter.js';
+import { applySyntaxHighlightingWithErrors, getSupportedLanguages } from './SyntaxHighlighter.js';
 import { parseMarkdown } from '../markdownRules.js';
 import { MarkdownToolBar } from './MarkdownToolBar.js';
 
@@ -97,6 +97,23 @@ export class NotesView {
       // Create wrapper for the code editor components
       const codeEditorWrapper = document.createElement('div');
       codeEditorWrapper.classList.add('code-editor-wrapper');
+
+      // Language selector (top of cell)
+      const supportedLanguages = getSupportedLanguages();
+      const languageSelect = document.createElement('select');
+      languageSelect.classList.add('code-cell-language-select');
+      languageSelect.setAttribute('aria-label', 'Code language');
+      supportedLanguages.forEach(({ id, displayName }) => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = displayName;
+        if (id === (cell.language || 'python')) option.selected = true;
+        languageSelect.appendChild(option);
+      });
+      const editorHeader = document.createElement('div');
+      editorHeader.classList.add('code-editor-header');
+      editorHeader.appendChild(languageSelect);
+
       // Create container for editor and highlighting
       const editorContainer = document.createElement('div');
       editorContainer.classList.add('editor-container');
@@ -123,9 +140,8 @@ export class NotesView {
       let errorSpans = []; // { el, message }
       const updateSyntaxHighlighting = () => {
         const code = codeTextarea.value;
-        //const selectedLanguage = select.value;
-        // Apply syntax highlighting
-        const highlightedCode = applySyntaxHighlightingWithErrors(code, 'python');
+        const languageId = languageSelect.value;
+        const highlightedCode = applySyntaxHighlightingWithErrors(code, languageId);
         syntaxOverlay.innerHTML = highlightedCode;
         // Sync scroll
         syntaxOverlay.scrollTop = codeTextarea.scrollTop;
@@ -237,11 +253,16 @@ export class NotesView {
       // Initial syntax highlighting
       updateSyntaxHighlighting();
 
+      languageSelect.addEventListener('change', () => {
+        updateSyntaxHighlighting();
+      });
+
       // Compose the editor container
       editorContainer.appendChild(syntaxOverlay);
       editorContainer.appendChild(codeTextarea);
 
       // Append to the wrapper
+      codeEditorWrapper.appendChild(editorHeader);
       codeEditorWrapper.appendChild(editorContainer);
       cellContent.appendChild(codeEditorWrapper);
     } else {
