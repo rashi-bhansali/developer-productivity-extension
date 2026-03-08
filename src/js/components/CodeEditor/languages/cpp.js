@@ -13,8 +13,9 @@ const patterns = {
     /\b(alignas|alignof|and|and_eq|asm|auto|bitand|bitor|bool|break|case|catch|char|char8_t|char16_t|char32_t|class|compl|concept|const|consteval|constexpr|constinit|const_cast|continue|co_await|co_return|co_yield|decltype|default|delete|do|double|dynamic_cast|else|enum|explicit|export|extern|false|float|for|friend|goto|if|inline|int|long|mutable|namespace|new|noexcept|not|not_eq|nullptr|operator|or|or_eq|private|protected|public|register|reinterpret_cast|requires|return|short|signed|sizeof|static|static_assert|static_cast|struct|switch|template|this|thread_local|throw|true|try|typedef|typeid|typename|union|unsigned|using|virtual|void|volatile|wchar_t|while|xor|xor_eq)\b/,
   builtinFunction:
     /\b(cout|cin|cerr|endl|printf|scanf|malloc|free|new|delete|std|vector|string|map|set|pair|make_pair|push_back|pop_back|size|begin|end|sort|find|insert|erase)\b/,
-  number: /\b(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?[uUlLfF]?\b/,
-  preprocessor: /^#\s*(include|define|ifdef|ifndef|endif|pragma|undef|if|else|elif)[^\n]*/m,
+  number: /\b(\d+\.?\d*)([eE][-+]?\d+)?([uUlLfF]{0,2})\b/,
+  preprocessor:
+    /^#\s*(include|define|ifdef|ifndef|endif|pragma|undef|if|else|elif)[^\n]*/m,
   operator:
     /(\+\+|--|->|\*|&|::|\+=|-=|\*=|\/=|%=|==|!=|<=|>=|&&|\|\||<<|>>|[+\-\/%<>=!])/,
   function: /\b[a-zA-Z_]\w*(?=\s*\()/,
@@ -32,7 +33,7 @@ function createCombinedRegex() {
       patterns.function.source,
       patterns.operator.source,
     ].join('|'),
-    'gm',
+    'gms',
   );
 }
 
@@ -42,6 +43,7 @@ function createCombinedRegex() {
  * @returns {string} HTML string
  */
 export function highlight(code) {
+  if (code == null || typeof code !== 'string') return ''; //edge case identified while testing
   const regex = createCombinedRegex();
   return code.replace(regex, (match) => {
     if (patterns.comment.test(match)) {
@@ -95,7 +97,9 @@ export function checkSyntax(code) {
       !trimmedLine.startsWith('#') &&
       !trimmedLine.startsWith('//') &&
       !trimmedLine.startsWith('*') &&
-      !/^(if|else|for|while|do|switch|try|catch|class|struct|namespace)\b/.test(trimmedLine);
+      !/^(if|else|for|while|do|switch|try|catch|class|struct|namespace)\b/.test(
+        trimmedLine,
+      );
 
     if (needsSemicolon) {
       errors.push({

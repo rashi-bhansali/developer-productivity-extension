@@ -1,4 +1,3 @@
-/* eslint-disable no-useless-escape */
 /**
  * JavaScript language adapter: syntax highlighting and syntax/error checks.
  * Implements the language adapter interface used by SyntaxHighlighter.
@@ -7,7 +6,7 @@
 import { escapeHtml, commonSyntaxChecks } from '../../../utils/syntaxUtils.js';
 
 const patterns = {
-  comment: /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm,
+  comment: /\/\/.*$|\/\*[\s\S]*?\*\//m,
   string: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)/,
   keyword:
     /\b(await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|function|if|import|in|instanceof|let|new|null|return|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield)\b/,
@@ -27,10 +26,10 @@ function createCombinedRegex() {
       patterns.keyword.source,
       patterns.builtinFunction.source,
       patterns.number.source,
-      patterns.function.source,
+      `(${patterns.function.source})`,
       patterns.operator.source,
     ].join('|'),
-    'gm',
+    'gms',
   );
 }
 
@@ -40,8 +39,9 @@ function createCombinedRegex() {
  * @returns {string} HTML string
  */
 export function highlight(code) {
+  if (code == null || typeof code !== 'string') return ''; //edge case identified while testing
   const regex = createCombinedRegex();
-  return code.replace(regex, (match) => {
+  return code.replace(regex, (match, _s, _kw, _bi, _n1, _n2, fnMatch) => {
     if (patterns.comment.test(match)) {
       return `<span class="token comment">${escapeHtml(match)}</span>`;
     }
@@ -57,7 +57,7 @@ export function highlight(code) {
     if (patterns.number.test(match)) {
       return `<span class="token number">${escapeHtml(match)}</span>`;
     }
-    if (patterns.function.test(match)) {
+    if (fnMatch) {
       return `<span class="token function">${escapeHtml(match)}</span>`;
     }
     if (patterns.operator.test(match)) {
@@ -76,17 +76,66 @@ export function checkSyntax(code) {
   const errors = [];
   const lines = code.split('\n');
   const keywords = new Set([
-    'await', 'break', 'case', 'catch', 'class', 'const', 'continue',
-    'debugger', 'default', 'delete', 'do', 'else', 'export', 'extends',
-    'false', 'finally', 'for', 'function', 'if', 'import', 'in',
-    'instanceof', 'let', 'new', 'null', 'return', 'static', 'super',
-    'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void',
-    'while', 'with', 'yield',
+    'await',
+    'break',
+    'case',
+    'catch',
+    'class',
+    'const',
+    'continue',
+    'debugger',
+    'default',
+    'delete',
+    'do',
+    'else',
+    'export',
+    'extends',
+    'false',
+    'finally',
+    'for',
+    'function',
+    'if',
+    'import',
+    'in',
+    'instanceof',
+    'let',
+    'new',
+    'null',
+    'return',
+    'static',
+    'super',
+    'switch',
+    'this',
+    'throw',
+    'true',
+    'try',
+    'typeof',
+    'var',
+    'void',
+    'while',
+    'with',
+    'yield',
   ]);
   const builtins = new Set([
-    'console', 'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
-    'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'JSON', 'Math', 'Object',
-    'Array', 'String', 'Number', 'Boolean', 'Promise', 'Map', 'Set',
+    'console',
+    'setTimeout',
+    'setInterval',
+    'clearTimeout',
+    'clearInterval',
+    'parseInt',
+    'parseFloat',
+    'isNaN',
+    'isFinite',
+    'JSON',
+    'Math',
+    'Object',
+    'Array',
+    'String',
+    'Number',
+    'Boolean',
+    'Promise',
+    'Map',
+    'Set',
   ]);
 
   lines.forEach((line, index) => {
@@ -114,7 +163,8 @@ export function checkSyntax(code) {
 
     // Check for undefined variables (basic - skips keywords and builtins)
     const identifierRegex = /\b[a-zA-Z_$][\w$]*\b/g;
-    const stringLiteralRegex = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)/g;
+    const stringLiteralRegex =
+      /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)/g;
     const cleanedLine = trimmedLine.replace(stringLiteralRegex, (m) =>
       ' '.repeat(m.length),
     );

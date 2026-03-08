@@ -14,8 +14,7 @@ const patterns = {
   builtinFunction:
     /\b(print|len|range|type|int|str|float|list|dict|set|tuple|sum|min|max|abs|round|input)\b/,
   number: /\b(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?\b/,
-  operator:
-    /(\+|\-|\*|\/|%|\*\*|==|!=|<=|>=|<|>|=|\+=|\-=|\*=|\/=|%=|\*\*=)/,
+  operator: /(\+|\-|\*|\/|%|\*\*|==|!=|<=|>=|<|>|=|\+=|\-=|\*=|\/=|%=|\*\*=)/,
   function: /\b[a-zA-Z_]\w*(?=\s*\()/,
 };
 
@@ -27,7 +26,7 @@ function createCombinedRegex() {
       patterns.keyword.source,
       patterns.builtinFunction.source,
       patterns.number.source,
-      patterns.function.source,
+      `(${patterns.function.source})`,
       patterns.operator.source,
     ].join('|'),
     'g',
@@ -40,8 +39,9 @@ function createCombinedRegex() {
  * @returns {string} HTML string
  */
 export function highlight(code) {
+  if (code == null || typeof code !== 'string') return ''; //edge case identified while testing
   const regex = createCombinedRegex();
-  return code.replace(regex, (match) => {
+  return code.replace(regex, (match, _s, _kw, _bi, _n1, _n2, _n3, fnMatch) => {
     if (patterns.comment.test(match)) {
       return `<span class="token comment">${escapeHtml(match)}</span>`;
     }
@@ -57,7 +57,7 @@ export function highlight(code) {
     if (patterns.number.test(match)) {
       return `<span class="token number">${escapeHtml(match)}</span>`;
     }
-    if (patterns.function.test(match)) {
+    if (fnMatch) {
       return `<span class="token function">${escapeHtml(match)}</span>`;
     }
     if (patterns.operator.test(match)) {
@@ -76,14 +76,58 @@ export function checkSyntax(code) {
   const errors = [];
   const lines = code.split('\n');
   const keywords = new Set([
-    'and', 'as', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif',
-    'else', 'except', 'False', 'finally', 'for', 'from', 'global', 'if',
-    'import', 'in', 'is', 'lambda', 'None', 'nonlocal', 'not', 'or', 'pass',
-    'raise', 'return', 'True', 'try', 'while', 'with', 'yield',
+    'and',
+    'as',
+    'assert',
+    'break',
+    'class',
+    'continue',
+    'def',
+    'del',
+    'elif',
+    'else',
+    'except',
+    'False',
+    'finally',
+    'for',
+    'from',
+    'global',
+    'if',
+    'import',
+    'in',
+    'is',
+    'lambda',
+    'None',
+    'nonlocal',
+    'not',
+    'or',
+    'pass',
+    'raise',
+    'return',
+    'True',
+    'try',
+    'while',
+    'with',
+    'yield',
   ]);
   const builtins = new Set([
-    'print', 'len', 'range', 'type', 'int', 'str', 'float', 'list', 'dict',
-    'set', 'tuple', 'sum', 'min', 'max', 'abs', 'round', 'input',
+    'print',
+    'len',
+    'range',
+    'type',
+    'int',
+    'str',
+    'float',
+    'list',
+    'dict',
+    'set',
+    'tuple',
+    'sum',
+    'min',
+    'max',
+    'abs',
+    'round',
+    'input',
   ]);
   const scopes = [{ indent: 0, names: new Set() }];
   const currentScope = () => scopes[scopes.length - 1];
@@ -112,9 +156,20 @@ export function checkSyntax(code) {
     }
 
     const colonRequiredKeywords = [
-      'def', 'class', 'if', 'else', 'elif', 'for', 'while', 'try', 'except', 'finally',
+      'def',
+      'class',
+      'if',
+      'else',
+      'elif',
+      'for',
+      'while',
+      'try',
+      'except',
+      'finally',
     ];
-    const needsColon = colonRequiredKeywords.some((k) => trimmedLine.startsWith(k));
+    const needsColon = colonRequiredKeywords.some((k) =>
+      trimmedLine.startsWith(k),
+    );
     if (needsColon && !trimmedLine.endsWith(':')) {
       errors.push({
         message: 'Missing colon after control structure or definition',
@@ -127,7 +182,9 @@ export function checkSyntax(code) {
     if (assignMatch) currentScope().names.add(assignMatch[1]);
     const forMatch = trimmedLine.match(/^for\s+([a-zA-Z_]\w*)\s+in\b/);
     if (forMatch) currentScope().names.add(forMatch[1]);
-    const defMatch = trimmedLine.match(/^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*:/);
+    const defMatch = trimmedLine.match(
+      /^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*:/,
+    );
     if (defMatch) {
       currentScope().names.add(defMatch[1]);
       defMatch[2]
@@ -176,9 +233,8 @@ export function checkSyntax(code) {
     if (!hasMissingQuoteError) {
       const identifierRegex = /\b[a-zA-Z_]\w*\b/g;
       const stringLiteralRegex = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
-      const cleanedForVars = trimmedLine.replace(
-        stringLiteralRegex,
-        (m) => ' '.repeat(m.length),
+      const cleanedForVars = trimmedLine.replace(stringLiteralRegex, (m) =>
+        ' '.repeat(m.length),
       );
       let match;
       while ((match = identifierRegex.exec(cleanedForVars)) !== null) {
@@ -189,7 +245,8 @@ export function checkSyntax(code) {
           name === 'True' ||
           name === 'False' ||
           name === 'None'
-        ) continue;
+        )
+          continue;
         if (scopes.some((scope) => scope.names.has(name))) continue;
         errors.push({
           message: `Possible undefined variable '${name}'`,

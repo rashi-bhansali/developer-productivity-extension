@@ -34,6 +34,7 @@ describe('NotesView', () => {
       '', // Default content
       'markdown', // Default cell type
       null, // No targetTimestamp
+      null, // No languageId
     );
     const renderedCells = document.querySelectorAll('.cell-container');
     expect(renderedCells.length).toBe(1);
@@ -117,6 +118,7 @@ describe('NotesView', () => {
       '123',
       'New content',
       'markdown',
+      null, //languageId null for markdown cells
     );
     jest.useRealTimers(); // Restore real timers after the test suite
   });
