@@ -1,4 +1,4 @@
-import { applySyntaxHighlightingWithErrors, getSupportedLanguages } from './SyntaxHighlighter.js';
+import { applySyntaxHighlightingWithErrors, getSupportedLanguages } from './CodeEditor/SyntaxHighlighter.js';
 import { parseMarkdown } from '../utils/markdownRules.js';
 import { MarkdownToolBar } from './MarkdownToolBar.js';
 

@@ -4,8 +4,8 @@
  * applies error markup via highlightErrors.
  */
 
-import { getAdapter, getSupportedLanguages } from '../languages/index.js';
-import { escapeHtml } from '../utils/syntaxUtils.js';
+import { getAdapter, getSupportedLanguages } from './languages/registry.js';
+import { escapeHtml } from '../../utils/syntaxUtils.js';
 
 /**
  * Wrap error lines with .error spans for squiggly + tooltip.

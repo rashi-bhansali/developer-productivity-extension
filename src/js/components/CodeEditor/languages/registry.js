@@ -6,10 +6,12 @@
 
 import pythonAdapter from './python.js';
 import javascriptAdapter from './javascript.js';
+import cppAdapter from './cpp.js';
 
 const registry = {
   [pythonAdapter.id]: pythonAdapter,
   [javascriptAdapter.id]: javascriptAdapter,
+  [cppAdapter.id]: cppAdapter,
 };
 
 /**
