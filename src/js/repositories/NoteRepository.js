@@ -42,12 +42,12 @@ export class NoteRepository {
     }
   }
 
-  async addCellToNote(url, timestamp, content, cellType, targetTimestamp) {
+  async addCellToNote(url, timestamp, content, cellType, targetTimestamp, languageId=null) {
     const notes = await this.getAllNotes();
     const newUrl = this.removeAllQueryParams(url);
     const noteToUpdate =
       notes.find((note) => note.url === newUrl) || (await this.addNote(newUrl));
-    const newCell = new NoteCell(timestamp, content, cellType);
+    const newCell = new NoteCell(timestamp, content, cellType, languageId);
     if (noteToUpdate) {
       if (targetTimestamp) {
         // Find the target cell index
@@ -67,7 +67,7 @@ export class NoteRepository {
     }
   }
 
-  async updateCellContent(url, timestamp, content, cellType) {
+  async updateCellContent(url, timestamp, content, cellType, languageId=null) {
     const notes = await this.getAllNotes();
     const newUrl = this.removeAllQueryParams(url);
     const note = notes.find((note) => note.url === newUrl);
@@ -82,7 +82,7 @@ export class NoteRepository {
     if (cell) {
       cell.content = content;
       cell.cellType = cellType;
-
+      cell.languageId = languageId; //null for markdown, language id for code
       // Save the updated note to the database
       await this.indexDBService.set(NoteRepository.STORAGE_KEY, notes);
       console.log('Updated cell content saved:', cell);

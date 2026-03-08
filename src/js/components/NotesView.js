@@ -34,13 +34,15 @@ export class NotesView {
         content: '',
         cellType: 'markdown',
         timestamp: new Date().toISOString(),
+        languageId: null,
       };
       if (this.onAddCell) {
         await this.onAddCell(
           defaultCell.timestamp,
           defaultCell.content,
           defaultCell.cellType,
-          null,
+          null, // No target timestamp
+          null, // No languageId for markdown cells
         ); //targetTimestamp empty for a default cell
       }
 
@@ -107,9 +109,10 @@ export class NotesView {
         const option = document.createElement('option');
         option.value = id;
         option.textContent = displayName;
-        if (id === (cell.language || 'python')) option.selected = true;
+        if (id === (cell.languageId || 'python')) option.selected = true;
         languageSelect.appendChild(option);
       });
+      languageSelect.dataset.currentLanguage = cell.languageId || 'python';
       const editorHeader = document.createElement('div');
       editorHeader.classList.add('code-editor-header');
       editorHeader.appendChild(languageSelect);
@@ -169,7 +172,7 @@ export class NotesView {
         // Save functionality
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(
-          () => this.onUpdateCell(cell.timestamp, codeTextarea.value, 'code'),
+          () => this.onUpdateCell(cell.timestamp, codeTextarea.value, 'code', languageSelect.value),
           200,
         );
       });
@@ -253,7 +256,30 @@ export class NotesView {
       // Initial syntax highlighting
       updateSyntaxHighlighting();
 
-      languageSelect.addEventListener('change', () => {
+      languageSelect.addEventListener('change', (e) => {
+        const newLanguage = e.target.value;
+        const previousLanguage = languageSelect.dataset.currentLanguage || 'python';
+        const currentCode = codeTextarea.value.trim();
+
+        if (currentCode) {
+          const confirmed = window.confirm(
+            'Changing language will clear existing code. This cannot be undone. Continue?'
+          );
+
+          if (!confirmed) {
+            e.target.value = previousLanguage; // revert dropdown
+            return; // exit before updating dataset
+          }
+
+          // Clear the code cell
+          codeTextarea.value = '';
+          syntaxOverlay.innerHTML = '';
+          errorSpans = [];
+          this.onUpdateCell(cell.timestamp, '', 'code', newLanguage);
+        }
+
+        // Only update tracked language if user confirmed or cell was empty
+        languageSelect.dataset.currentLanguage = newLanguage;
         updateSyntaxHighlighting();
       });
 
@@ -288,7 +314,7 @@ export class NotesView {
       textarea.addEventListener('input', () => {
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(
-          () => this.onUpdateCell(cell.timestamp, textarea.value, 'markdown'),
+          () => this.onUpdateCell(cell.timestamp, textarea.value, 'markdown', null),
           500,
         );
       });
@@ -384,6 +410,7 @@ export class NotesView {
         content: '',
         cellType: 'markdown',
         timestamp: new Date().toISOString(),
+        languageId: null,
       };
       if (this.onAddCell) {
         await this.onAddCell(
@@ -391,6 +418,7 @@ export class NotesView {
           markCell.content,
           markCell.cellType,
           timestamp,
+          markCell.languageId,
         );
       }
       await this.addCellAfterCurrent(container, markCell);
@@ -404,6 +432,7 @@ export class NotesView {
         content: '',
         cellType: 'code',
         timestamp: new Date().toISOString(),
+        languageId: 'python', //default to python for new code cells
       };
       if (this.onAddCell) {
         await this.onAddCell(
@@ -411,6 +440,7 @@ export class NotesView {
           codeCell.content,
           codeCell.cellType,
           timestamp,
+          codeCell.languageId,
         );
       }
       await this.addCellAfterCurrent(container, codeCell);
@@ -462,6 +492,7 @@ export class NotesView {
               ? 'code'
               : 'markdown'
             : 'markdownFormat',
+          null, // languageId is not relevant for markdown cells
         );
       }
     }
@@ -486,6 +517,7 @@ export class NotesView {
               ? 'code'
               : 'markdown'
             : 'markdownFormat',
+            null, // languageId is not relevant for markdown cells
         );
       }
     }
@@ -550,6 +582,7 @@ export class NotesView {
         content: '',
         cellType: 'markdown',
         timestamp: new Date().toISOString(),
+        languageId: null,
       };
 
       // Trigger the add cell logic
@@ -559,6 +592,7 @@ export class NotesView {
           defaultCell.content,
           defaultCell.cellType,
           null, // No target timestamp
+          defaultCell.languageId,
         ).then(() => this.addCellAfterCurrent(this.container, defaultCell));
       }
     }

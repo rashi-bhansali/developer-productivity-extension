@@ -47,8 +47,8 @@ class NotesApp {
         await this.handleAddCell(timestamp, content, cellType, targetTimestamp),
     );
     this.notesView.setOnUpdateCell(
-      async (timestamp, content, cellType) =>
-        await this.handleUpdateCell(timestamp, content, cellType),
+      async (timestamp, content, cellType, languageId) =>
+        await this.handleUpdateCell(timestamp, content, cellType, languageId),
     );
   }
 
@@ -77,13 +77,14 @@ class NotesApp {
     }
   }
 
-  async handleUpdateCell(timestamp, content, cellType) {
+  async handleUpdateCell(timestamp, content, cellType, languageId=null) {
     try {
       await this.noteRepository.updateCellContent(
         await this.getUrl(),
         timestamp,
         content,
         cellType,
+        languageId, // null for markdown, language id for code
       );
     } catch (error) {
       console.error('Error in saving cell content to the note', error);

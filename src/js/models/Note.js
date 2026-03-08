@@ -12,5 +12,6 @@ export class NoteCell {
     this.content = content;
     this.cellType = cellType;
     this.timestamp = timestamp;
+    this.languageId = null; //for code cells, to specify the language (e.g., 'python', 'javascript')
   }
 }

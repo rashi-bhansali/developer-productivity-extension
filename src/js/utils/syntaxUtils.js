@@ -24,27 +24,39 @@ export const commonSyntaxChecks = (code, rules) => {
   const cleanCode = code.replace(rules.patterns.comment, '');
   const bracketPairs = { '(': ')', '[': ']', '{': '}' };
   const brackets = { '(': 0, '[': 0, '{': 0 };
+  const bracketLines = { '(': 1, '[': 1, '{': 1 }; //track line where opened
 
+  let currentLine = 0;
   for (const char of cleanCode) {
-    if (char in brackets) brackets[char]++;
+    if (char === '\n') { currentLine++; continue; }
+    if (char in brackets) {
+      brackets[char]++;
+      bracketLines[char] = currentLine; //update line when opened
+    }
     if (Object.values(bracketPairs).includes(char)) {
       const openBracket = Object.keys(bracketPairs).find(
-        (key) => bracketPairs[key] === char,
+        (key) => bracketPairs[key] === char
       );
       if (brackets[openBracket] > 0) brackets[openBracket]--;
       else {
-        errors.push({ message: `Unbalanced ${char} bracket`, line: 0, column: 0 });
+        errors.push({ 
+          message: `Unbalanced ${char} bracket`, 
+          line: currentLine, 
+          column: 0 
+        });
       }
     }
   }
+
   Object.entries(brackets).forEach(([bracket, count]) => {
     if (count > 0) {
       errors.push({
         message: `Unclosed ${bracket} bracket`,
-        line: 0,
+        line: bracketLines[bracket], //line where it was opened
         column: 0,
       });
     }
   });
+
   return errors;
 };
