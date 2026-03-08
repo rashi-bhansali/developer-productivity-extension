@@ -4,7 +4,7 @@
  * Implements the language adapter interface used by SyntaxHighlighter.
  */
 
-import { escapeHtml, commonSyntaxChecks } from '../utils/syntaxUtils.js';
+import { escapeHtml, commonSyntaxChecks } from '../../../utils/syntaxUtils.js';
 
 const patterns = {
   comment: /(\/\/.*$|\/\*[\s\S]*?\*\/)/m,
