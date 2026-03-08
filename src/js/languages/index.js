@@ -5,9 +5,11 @@
  */
 
 import pythonAdapter from './python.js';
+import javascriptAdapter from './javascript.js';
 
 const registry = {
   [pythonAdapter.id]: pythonAdapter,
+  [javascriptAdapter.id]: javascriptAdapter,
 };
 
 /**
