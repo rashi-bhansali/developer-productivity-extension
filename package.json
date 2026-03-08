@@ -28,6 +28,8 @@
   },
   "scripts": {
     "prepare": "husky",
-    "test": "jest"
+    "test": "jest",
+    "test:e2e": "playwright test",
+    "test:all": "jest && playwright test --ignore=tests/performance"
   }
 }
