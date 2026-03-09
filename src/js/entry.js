@@ -21,7 +21,7 @@ class NotesApp {
 
     this.darkModeComponent.initializeSystemTheme(); // Sync with system theme
     this.darkModeComponent.initializeManualThemeToggle(
-      document.querySelector('#container'), // Pass the container for the toggle button
+      document.querySelector('header'), // Attach to sticky header so toggle stays sticky
     );
   }
 
@@ -77,7 +77,7 @@ class NotesApp {
     }
   }
 
-  async handleUpdateCell(timestamp, content, cellType, languageId=null) {
+  async handleUpdateCell(timestamp, content, cellType, languageId = null) {
     try {
       await this.noteRepository.updateCellContent(
         await this.getUrl(),

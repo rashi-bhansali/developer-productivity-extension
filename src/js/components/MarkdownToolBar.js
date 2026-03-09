@@ -20,14 +20,14 @@ export class MarkdownToolBar {
           { prefix: '##### ', suffix: '', label: 'H5' },
           { prefix: '###### ', suffix: '', label: 'H6' },
         ],
-        icon: 'fa-solid fa-heading',
+        icon: 'heading',
       },
       {
         id: 'bold-btn',
         prefix: '**',
         suffix: '**',
         tooltip: 'Bold',
-        icon: 'fa-solid fa-bold',
+        icon: 'bold',
         shortcut: 'Ctrl+B / ⌘B',
       },
       {
@@ -35,7 +35,7 @@ export class MarkdownToolBar {
         prefix: '*',
         suffix: '*',
         tooltip: 'Italics',
-        icon: 'fa-solid fa-italic',
+        icon: 'italic',
         shortcut: 'Ctrl+I / ⌘I',
       },
       {
@@ -43,7 +43,7 @@ export class MarkdownToolBar {
         prefix: '<u>',
         suffix: '</u>',
         tooltip: 'Underline',
-        icon: 'fa-solid fa-underline',
+        icon: 'underline',
         shortcut: 'Ctrl+U / ⌘U',
       },
       {
@@ -51,7 +51,7 @@ export class MarkdownToolBar {
         prefix: '~~',
         suffix: '~~',
         tooltip: 'Strikethrough',
-        icon: 'fa-solid fa-strikethrough',
+        icon: 'strikethrough',
         shortcut: 'Ctrl+Shift+S / ⌘Shift+S',
       },
       {
@@ -59,7 +59,7 @@ export class MarkdownToolBar {
         prefix: '- ',
         suffix: '',
         tooltip: 'List',
-        icon: 'fa-solid fa-list',
+        icon: 'list',
         shortcut: 'Ctrl+L / ⌘L',
       },
       {
@@ -67,7 +67,7 @@ export class MarkdownToolBar {
         prefix: '```',
         suffix: '```',
         tooltip: 'Code Snippet',
-        icon: 'fa-solid fa-code',
+        icon: 'code',
         shortcut: 'Ctrl+` / ⌘`',
       },
       {
@@ -75,7 +75,7 @@ export class MarkdownToolBar {
         prefix: '',
         suffix: '\n---',
         tooltip: 'Horizontal Rule',
-        icon: 'fa-solid fa-minus',
+        icon: 'minus',
         shortcut: 'Ctrl+H / ⌘H',
       },
       {
@@ -83,7 +83,7 @@ export class MarkdownToolBar {
         prefix: '[',
         suffix: '](url)',
         tooltip: 'Link',
-        icon: 'fa-solid fa-link',
+        icon: 'link',
         shortcut: 'Ctrl+K / ⌘K',
       },
     ];
@@ -106,15 +106,32 @@ export class MarkdownToolBar {
     return this.toolbar;
   }
 
+  getIconSvg(icon) {
+    const paths = {
+      heading: '<path d="M6 12h12"/><path d="M6 20V4"/><path d="M18 20V4"/>',
+      bold: '<path d="M6 4h7a4 4 0 0 1 0 8H6z"/><path d="M6 12h8a4 4 0 0 1 0 8H6z"/>',
+      italic:
+        '<line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>',
+      underline:
+        '<path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/>',
+      strikethrough:
+        '<path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" y1="12" x2="20" y2="12"/>',
+      list: '<line x1="8" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="18" x2="20" y2="18"/><line x1="4" y1="6" x2="4.01" y2="6"/><line x1="4" y1="12" x2="4.01" y2="12"/><line x1="4" y1="18" x2="4.01" y2="18"/>',
+      code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+      minus: '<line x1="5" y1="12" x2="19" y2="12"/>',
+      link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    };
+
+    return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[icon] || ''}</svg>`;
+  }
+
   createButton({ id, prefix, suffix, tooltip, icon }) {
     const button = document.createElement('button');
     button.type = 'button';
     button.id = id;
     button.title = tooltip;
     button.classList.add('markdown-toolbar-button');
-    const buttonIcon = document.createElement('i');
-    buttonIcon.classList.add(...icon.split(' '));
-    button.appendChild(buttonIcon);
+    button.innerHTML = this.getIconSvg(icon);
 
     button.addEventListener('click', () => {
       this.insertMarkdown(prefix, suffix);
@@ -132,9 +149,7 @@ export class MarkdownToolBar {
     const dropdownButton = document.createElement('button');
     dropdownButton.type = 'button';
     dropdownButton.classList.add('markdown-toolbar-button');
-    const dropdownIcon = document.createElement('i');
-    dropdownIcon.classList.add(...icon.split(' '));
-    dropdownButton.appendChild(dropdownIcon);
+    dropdownButton.innerHTML = this.getIconSvg(icon);
     container.appendChild(dropdownButton);
 
     const dropdownMenu = document.createElement('div');

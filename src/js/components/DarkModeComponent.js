@@ -2,29 +2,24 @@ export class DarkModeComponent {
   constructor() {
     this.body = document.body;
     this.darkModeBtn = null;
+    this.themeStorageKey = 'devinks-theme';
   }
 
   /**
-   * Automatically syncs the theme with the system's preference.
+   * Applies saved preference; if none exists, follows system theme.
    */
   initializeSystemTheme() {
-    const applySystemTheme = () => {
-      const systemPrefersDark = window.matchMedia(
-        '(prefers-color-scheme: dark)',
-      ).matches;
-      this.body.classList.toggle('dark-mode', systemPrefersDark);
-      console.log(
-        `System theme applied: ${systemPrefersDark ? 'dark' : 'light'}`,
-      );
-    };
+    const savedTheme = localStorage.getItem(this.themeStorageKey);
 
-    // Apply the system theme on load
-    applySystemTheme();
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      this.body.classList.toggle('dark-mode', savedTheme === 'dark');
+      return;
+    }
 
-    // Listen for system preference changes
-    window
-      .matchMedia('(prefers-color-scheme: dark)')
-      .addEventListener('change', applySystemTheme);
+    const systemPrefersDark = window.matchMedia(
+      '(prefers-color-scheme: dark)',
+    ).matches;
+    this.body.classList.toggle('dark-mode', systemPrefersDark);
   }
 
   /**
@@ -49,9 +44,17 @@ export class DarkModeComponent {
 
     // Set the initial button icon based on the current theme
     const setButtonIcon = () => {
-      this.darkModeBtn.innerHTML = this.body.classList.contains('dark-mode')
-        ? '☀️' // Sun icon for light mode
-        : '🌙'; // Moon icon for dark mode
+      const isDarkMode = this.body.classList.contains('dark-mode');
+      this.darkModeBtn.classList.toggle('is-dark', isDarkMode);
+      this.darkModeBtn.innerHTML = `
+        <span class="toggle-icon toggle-icon-sun"><i class="fa-solid fa-sun"></i></span>
+        <span class="toggle-icon toggle-icon-moon"><i class="fa-solid fa-moon"></i></span>
+        <span class="toggle-thumb" aria-hidden="true"></span>
+      `;
+      this.darkModeBtn.setAttribute(
+        'aria-label',
+        isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
+      );
     };
 
     // Initial icon setup
@@ -60,27 +63,9 @@ export class DarkModeComponent {
     // Add click event listener for manual theme toggle
     this.darkModeBtn.addEventListener('click', () => {
       const isDark = this.body.classList.toggle('dark-mode');
+      localStorage.setItem(this.themeStorageKey, isDark ? 'dark' : 'light');
       setButtonIcon();
       console.log(`Manual theme change: ${isDark ? 'dark' : 'light'}`);
     });
-
-    // Listen for system theme changes and update icon
-    const systemThemeListener = (event) => {
-      const systemPrefersDark = event.matches;
-      if (!this.body.classList.contains('dark-mode') && systemPrefersDark) {
-        this.body.classList.add('dark-mode');
-      } else if (
-        this.body.classList.contains('dark-mode') &&
-        !systemPrefersDark
-      ) {
-        this.body.classList.remove('dark-mode');
-      }
-      setButtonIcon(); // Update the icon when the system theme changes
-    };
-
-    const systemDarkModeQuery = window.matchMedia(
-      '(prefers-color-scheme: dark)',
-    );
-    systemDarkModeQuery.addEventListener('change', systemThemeListener);
   }
 }

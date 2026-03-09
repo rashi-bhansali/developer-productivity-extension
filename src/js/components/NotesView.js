@@ -1,4 +1,7 @@
-import { applySyntaxHighlightingWithErrors, getSupportedLanguages } from './CodeEditor/SyntaxHighlighter.js';
+import {
+  applySyntaxHighlightingWithErrors,
+  getSupportedLanguages,
+} from './CodeEditor/SyntaxHighlighter.js';
 import { parseMarkdown } from '../utils/markdownRules.js';
 import { MarkdownToolBar } from './MarkdownToolBar.js';
 
@@ -72,6 +75,12 @@ export class NotesView {
     // Create the cell
     const newCell = document.createElement('div');
     newCell.classList.add('cell');
+    newCell.classList.add(
+      cell.cellType === 'code' ? 'code-cell' : 'markdown-cell',
+    );
+    if (cell.cellType === 'markdownFormat') {
+      newCell.classList.add('is-preview');
+    }
 
     // Create delete button
     const deleteBtn = document.createElement('button');
@@ -82,10 +91,6 @@ export class NotesView {
 
     // Add event listener for deletion
     deleteBtn.addEventListener('click', (event) => this.deleteCell(event));
-
-    // Create toggle button
-    const spanText = document.createElement('span');
-    spanText.innerHTML = `&lt;/&gt  `;
 
     // Create cell content
     const cellContent = document.createElement('div');
@@ -131,7 +136,6 @@ export class NotesView {
       codeTextarea.placeholder = 'Write your code here...';
       codeTextarea.value = cell.content || '';
 
-
       // Tooltip functionality
       const tooltip = document.createElement('div');
       tooltip.classList.add('code-error-tooltip');
@@ -144,17 +148,22 @@ export class NotesView {
       const updateSyntaxHighlighting = () => {
         const code = codeTextarea.value;
         const languageId = languageSelect.value;
-        const highlightedCode = applySyntaxHighlightingWithErrors(code, languageId);
+        const highlightedCode = applySyntaxHighlightingWithErrors(
+          code,
+          languageId,
+        );
         syntaxOverlay.innerHTML = highlightedCode;
         // Sync scroll
         syntaxOverlay.scrollTop = codeTextarea.scrollTop;
         syntaxOverlay.scrollLeft = codeTextarea.scrollLeft;
 
         // Collect error spans for tooltip logic
-        errorSpans = Array.from(syntaxOverlay.querySelectorAll('.error')).map((el) => ({
-          el,
-          message: el.getAttribute('data-tooltip') || '',
-        }));
+        errorSpans = Array.from(syntaxOverlay.querySelectorAll('.error')).map(
+          (el) => ({
+            el,
+            message: el.getAttribute('data-tooltip') || '',
+          }),
+        );
       };
 
       // Debounce for syntax highlighting
@@ -172,7 +181,13 @@ export class NotesView {
         // Save functionality
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(
-          () => this.onUpdateCell(cell.timestamp, codeTextarea.value, 'code', languageSelect.value),
+          () =>
+            this.onUpdateCell(
+              cell.timestamp,
+              codeTextarea.value,
+              'code',
+              languageSelect.value,
+            ),
           200,
         );
       });
@@ -252,18 +267,19 @@ export class NotesView {
       codeTextarea.addEventListener('mouseleave', () => {
         tooltip.style.display = 'none';
       });
-    
+
       // Initial syntax highlighting
       updateSyntaxHighlighting();
 
       languageSelect.addEventListener('change', (e) => {
         const newLanguage = e.target.value;
-        const previousLanguage = languageSelect.dataset.currentLanguage || 'python';
+        const previousLanguage =
+          languageSelect.dataset.currentLanguage || 'python';
         const currentCode = codeTextarea.value.trim();
 
         if (currentCode) {
           const confirmed = window.confirm(
-            'Changing language will clear existing code. This cannot be undone. Continue?'
+            'Changing language will clear existing code. This cannot be undone. Continue?',
           );
 
           if (!confirmed) {
@@ -295,17 +311,24 @@ export class NotesView {
       // Markdown button
       const markdownBtn = document.createElement('button');
       markdownBtn.classList.add('markdown-btn');
-      const markdownText = document.createElement('span');
-      markdownText.innerHTML = 'M';
-      markdownBtn.appendChild(markdownText);
+      markdownBtn.type = 'button';
       const markdownIcon = document.createElement('i');
       markdownIcon.classList.add(
         'fa-solid',
+        cell.cellType === 'markdownFormat' ? 'fa-pen' : 'fa-eye',
         cell.cellType === 'markdownFormat'
           ? 'fa-markdown-on'
           : 'fa-markdown-off',
       );
       markdownBtn.appendChild(markdownIcon);
+      markdownBtn.setAttribute(
+        'aria-label',
+        cell.cellType === 'markdownFormat'
+          ? 'Switch to edit mode'
+          : 'Switch to preview mode',
+      );
+      markdownBtn.title =
+        cell.cellType === 'markdownFormat' ? 'Edit' : 'Preview';
       markdownBtn.addEventListener('click', (event) =>
         this.markdownCellType(event),
       );
@@ -314,7 +337,8 @@ export class NotesView {
       textarea.addEventListener('input', () => {
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(
-          () => this.onUpdateCell(cell.timestamp, textarea.value, 'markdown', null),
+          () =>
+            this.onUpdateCell(cell.timestamp, textarea.value, 'markdown', null),
           500,
         );
       });
@@ -461,6 +485,7 @@ export class NotesView {
     if (!markdownBtn) return;
 
     const cell = markdownBtn.closest('.cell-container');
+    const cellShell = cell.querySelector('.cell');
     const cellContent = cell.querySelector('.cell-content');
     const textarea = cellContent.querySelector('textarea');
     let renderedContent = cellContent.querySelector('.rendered-content');
@@ -476,9 +501,16 @@ export class NotesView {
     // Turn off markdown
     if (icon.classList.contains('fa-markdown-on')) {
       icon.classList.remove('fa-markdown-on');
+      icon.classList.remove('fa-pen');
       icon.classList.add('fa-markdown-off');
+      icon.classList.add('fa-eye');
+      markdownBtn.setAttribute('aria-label', 'Switch to preview mode');
+      markdownBtn.title = 'Preview';
       textarea.style.display = 'block';
       renderedContent.style.display = 'none';
+      if (cellShell) {
+        cellShell.classList.remove('is-preview');
+      }
       // Show toolbar
       if (toolbar) {
         toolbar.style.display = 'flex';
@@ -500,10 +532,17 @@ export class NotesView {
     // Turn on markdown
     else {
       icon.classList.remove('fa-markdown-off');
+      icon.classList.remove('fa-eye');
       icon.classList.add('fa-markdown-on');
+      icon.classList.add('fa-pen');
+      markdownBtn.setAttribute('aria-label', 'Switch to edit mode');
+      markdownBtn.title = 'Edit';
       textarea.style.display = 'none';
       renderedContent.style.display = 'block';
       renderedContent.innerHTML = parseMarkdown(textarea.value);
+      if (cellShell) {
+        cellShell.classList.add('is-preview');
+      }
       // Hide toolbar
       if (toolbar) {
         toolbar.style.display = 'none';
@@ -517,7 +556,7 @@ export class NotesView {
               ? 'code'
               : 'markdown'
             : 'markdownFormat',
-            null, // languageId is not relevant for markdown cells
+          null, // languageId is not relevant for markdown cells
         );
       }
     }
