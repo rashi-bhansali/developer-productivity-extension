@@ -63,6 +63,16 @@ int main() {
       const errors = checkSyntax(code);
       expect(errors.some((e) => e.message.includes('semicolon'))).toBe(false);
     });
+
+    it('should not flag semicolon inside split block comments', () => {
+      const code = `int main() {
+/* int x = 10
+still comment */
+return 0;
+}`;
+      const errors = checkSyntax(code);
+      expect(errors.some((e) => e.message.includes('semicolon'))).toBe(false);
+    });
   });
 
   describe('printf safety', () => {
@@ -90,6 +100,26 @@ int main() {
       const code = `int main() {\n    return 0;\n}`;
       const errors = checkSyntax(code);
       expect(errors.some((e) => e.message.includes('bracket'))).toBe(false);
+    });
+  });
+
+  describe('undefined variable', () => {
+    it('should warn on undefined identifiers', () => {
+      const code = `int main() {\n    int x = 10;\n    return y;\n}`;
+      const errors = checkSyntax(code);
+      expect(
+        errors.some((e) =>
+          e.message.includes("Possible undefined variable 'y'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('should not warn for declared identifiers', () => {
+      const code = `int main() {\n    int x = 10;\n    return x;\n}`;
+      const errors = checkSyntax(code);
+      expect(errors.some((e) => e.message.includes('undefined variable'))).toBe(
+        false,
+      );
     });
   });
 });

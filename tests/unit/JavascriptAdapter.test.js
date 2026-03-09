@@ -78,6 +78,38 @@ function greet(name) {
     });
   });
 
+  describe('undefined variable', () => {
+    it('should warn on undefined identifiers', () => {
+      const code = `const x = y + 1;`;
+      const errors = checkSyntax(code);
+      expect(
+        errors.some((e) =>
+          e.message.includes("Possible undefined variable 'y'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('should not warn for declared identifiers', () => {
+      const code = `const y = 2;\nconst x = y + 1;`;
+      const errors = checkSyntax(code);
+      expect(errors.some((e) => e.message.includes('undefined variable'))).toBe(
+        false,
+      );
+    });
+
+    it('should not warn on property access', () => {
+      const code = `const obj = { value: 1 };\nconsole.log(obj.value);`;
+      const errors = checkSyntax(code);
+      expect(errors.some((e) => e.message.includes("'value'"))).toBe(false);
+    });
+
+    it('should not warn on function name in incomplete declaration', () => {
+      const code = `function broken( {\n    return null;\n})`;
+      const errors = checkSyntax(code);
+      expect(errors.some((e) => e.message.includes("'broken'"))).toBe(false);
+    });
+  });
+
   describe('brackets', () => {
     it('should detect unclosed parenthesis', () => {
       const code = `function broken( {\n    return null;\n}`;

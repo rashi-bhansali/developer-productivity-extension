@@ -103,14 +103,14 @@ describe('commonSyntaxChecks', () => {
       const code = `const x = 10;\nfunction broken(`;
       const errors = commonSyntaxChecks(code, { patterns: jsPatterns });
       const bracketError = errors.find((e) => e.message.includes('('));
-      expect(bracketError.line).toBe(1); //0-indexed (second line)
+      expect(bracketError.line).toBe(2); //1-indexed (second line)
     });
 
     it('should report line 1 for bracket on first line', () => {
       const code = `function broken(`;
       const errors = commonSyntaxChecks(code, { patterns: jsPatterns });
       const bracketError = errors.find((e) => e.message.includes('('));
-      expect(bracketError.line).toBe(0); //0-indexed (first line)
+      expect(bracketError.line).toBe(1); //1-indexed (first line)
     });
   });
 });
