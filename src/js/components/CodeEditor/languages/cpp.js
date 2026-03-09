@@ -7,7 +7,7 @@
 import { escapeHtml, commonSyntaxChecks } from '../../../utils/syntaxUtils.js';
 
 const patterns = {
-  comment: /(\/\/.*$|\/\*[\s\S]*?\*\/)/m,
+  comment: /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/,
   string: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/,
   keyword:
     /\b(alignas|alignof|and|and_eq|asm|auto|bitand|bitor|bool|break|case|catch|char|char8_t|char16_t|char32_t|class|compl|concept|const|consteval|constexpr|constinit|const_cast|continue|co_await|co_return|co_yield|decltype|default|delete|do|double|dynamic_cast|else|enum|explicit|export|extern|false|float|for|friend|goto|if|inline|int|long|mutable|namespace|new|noexcept|not|not_eq|nullptr|operator|or|or_eq|private|protected|public|register|reinterpret_cast|requires|return|short|signed|sizeof|static|static_assert|static_cast|struct|switch|template|this|thread_local|throw|true|try|typedef|typeid|typename|union|unsigned|using|virtual|void|volatile|wchar_t|while|xor|xor_eq)\b/,
@@ -33,7 +33,7 @@ function createCombinedRegex() {
       patterns.function.source,
       patterns.operator.source,
     ].join('|'),
-    'gms',
+    'gm',
   );
 }
 
@@ -74,6 +74,145 @@ export function highlight(code) {
   });
 }
 
+function stripCommentsWithState(line, inBlockComment) {
+  let result = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (inBlockComment) {
+      if (char === '*' && nextChar === '/') {
+        inBlockComment = false;
+        result += '  ';
+        i++;
+      } else {
+        result += ' ';
+      }
+      continue;
+    }
+
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\' && (inSingleQuote || inDoubleQuote)) {
+      result += char;
+      escaped = true;
+      continue;
+    }
+
+    if (inSingleQuote) {
+      result += char;
+      if (char === "'") inSingleQuote = false;
+      continue;
+    }
+
+    if (inDoubleQuote) {
+      result += char;
+      if (char === '"') inDoubleQuote = false;
+      continue;
+    }
+
+    if (char === '/' && nextChar === '*') {
+      inBlockComment = true;
+      result += '  ';
+      i++;
+      continue;
+    }
+
+    if (char === '/' && nextChar === '/') {
+      break;
+    }
+
+    if (char === "'") {
+      inSingleQuote = true;
+      result += char;
+      continue;
+    }
+
+    if (char === '"') {
+      inDoubleQuote = true;
+      result += char;
+      continue;
+    }
+
+    result += char;
+  }
+
+  return { strippedLine: result, inBlockComment };
+}
+
+function extractCppParameterNames(parameters) {
+  const names = new Set();
+  parameters
+    .split(',')
+    .map((parameter) => parameter.trim().split('=')[0].trim())
+    .filter(Boolean)
+    .forEach((parameter) => {
+      const cleanedParameter = parameter.replace(/^[*&\s]+/, '');
+      const tokens = cleanedParameter.match(/[a-zA-Z_]\w*/g) || [];
+      const candidate = tokens[tokens.length - 1];
+      if (candidate) names.add(candidate);
+    });
+  return names;
+}
+
+function collectDeclarations(line, declaredNames, knownTypeNames) {
+  const trimmedLine = line.trim();
+  if (!trimmedLine || trimmedLine.startsWith('#')) return;
+
+  const classMatch = trimmedLine.match(/\b(?:class|struct)\s+([a-zA-Z_]\w*)/);
+  if (classMatch) {
+    knownTypeNames.add(classMatch[1]);
+  }
+
+  const functionMatch = trimmedLine.match(
+    /^(?!if\b|for\b|while\b|switch\b|catch\b)(?:[a-zA-Z_]\w*(?:::[a-zA-Z_]\w*)*(?:<[^>]*>)?[\s*&]+)+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*(?:const\b)?\s*(?:\{|;)/,
+  );
+  if (functionMatch) {
+    declaredNames.add(functionMatch[1]);
+    extractCppParameterNames(functionMatch[2]).forEach((name) =>
+      declaredNames.add(name),
+    );
+  }
+
+  const forDeclarationMatch = trimmedLine.match(
+    /\bfor\s*\(\s*(?:const\s+)?(?:[a-zA-Z_]\w*(?:::[a-zA-Z_]\w*)*(?:<[^>]*>)?[\s*&]+)+([a-zA-Z_]\w*)\b/,
+  );
+  if (forDeclarationMatch) {
+    declaredNames.add(forDeclarationMatch[1]);
+  }
+
+  if (
+    /^(return|using|namespace|typedef|if|else|for|while|switch|do|try|catch)\b/.test(
+      trimmedLine,
+    )
+  ) {
+    return;
+  }
+
+  const declarationMatch = trimmedLine.match(
+    /^(?:const\s+)?(?:(?:unsigned|signed|long|short|static|constexpr|volatile|mutable|register|auto)\s+)*(?:[a-zA-Z_]\w*(?:::[a-zA-Z_]\w*)*(?:<[^;{}()]*>)?)\s+([^;]+);$/,
+  );
+  if (!declarationMatch) return;
+
+  declarationMatch[1]
+    .split(',')
+    .map((segment) => segment.split('=')[0].trim())
+    .forEach((segment) => {
+      const nameMatch = segment
+        .replace(/^[*&\s]+/, '')
+        .match(/^([a-zA-Z_]\w*)/);
+      if (nameMatch) declaredNames.add(nameMatch[1]);
+    });
+}
+
 /**
  * Returns syntax/error check results for the given C++ code.
  * @param {string} code
@@ -81,24 +220,56 @@ export function highlight(code) {
  */
 export function checkSyntax(code) {
   const errors = [];
-  const lines = code.split('\n');
+  const rawLines = code.split('\n');
+  const strippedLines = [];
+  const declaredNames = new Set();
+  const knownTypeNames = new Set([
+    'int',
+    'long',
+    'short',
+    'float',
+    'double',
+    'char',
+    'bool',
+    'void',
+    'string',
+    'size_t',
+    'auto',
+    'vector',
+    'map',
+    'set',
+    'pair',
+    'std',
+    'wchar_t',
+    'char8_t',
+    'char16_t',
+    'char32_t',
+  ]);
 
-  lines.forEach((line, index) => {
+  let inBlockComment = false;
+  rawLines.forEach((line) => {
+    const { strippedLine, inBlockComment: nextInBlockComment } =
+      stripCommentsWithState(line, inBlockComment);
+    inBlockComment = nextInBlockComment;
+    strippedLines.push(strippedLine);
+    collectDeclarations(strippedLine, declaredNames, knownTypeNames);
+  });
+
+  strippedLines.forEach((line, index) => {
     const lineNumber = index + 1;
-    const trimmedLine = line.trim();
-    if (!trimmedLine || trimmedLine.startsWith('//')) return;
+    const codeOnly = line.trim();
+    if (!codeOnly) return; // line was entirely a comment
 
     // Check for missing semicolons on lines that should have them
     const needsSemicolon =
-      !trimmedLine.endsWith(';') &&
-      !trimmedLine.endsWith('{') &&
-      !trimmedLine.endsWith('}') &&
-      !trimmedLine.endsWith(':') &&
-      !trimmedLine.startsWith('#') &&
-      !trimmedLine.startsWith('//') &&
-      !trimmedLine.startsWith('*') &&
+      !codeOnly.endsWith(';') &&
+      !codeOnly.endsWith('{') &&
+      !codeOnly.endsWith('}') &&
+      !codeOnly.endsWith(':') &&
+      !codeOnly.startsWith('#') &&
+      !codeOnly.startsWith('*') &&
       !/^(if|else|for|while|do|switch|try|catch|class|struct|namespace)\b/.test(
-        trimmedLine,
+        codeOnly,
       );
 
     if (needsSemicolon) {
@@ -110,11 +281,65 @@ export function checkSyntax(code) {
     }
 
     // Warn about printf without format specifier safety
-    if (/\bprintf\s*\(\s*[^")][^)]*\)/.test(trimmedLine)) {
+    if (/\bprintf\s*\(\s*[^")][^)]*\)/.test(codeOnly)) {
       errors.push({
         message: 'printf with non-literal format string may be unsafe',
         line: lineNumber,
-        column: trimmedLine.indexOf('printf'),
+        column: codeOnly.indexOf('printf'),
+      });
+    }
+
+    // Undefined variable check
+    if (codeOnly.startsWith('#')) return;
+
+    const cleanedLine = codeOnly.replace(
+      /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g,
+      (match) => ' '.repeat(match.length),
+    );
+    const identifierRegex = /[a-zA-Z_]\w*/g;
+    const lineSeenNames = new Set();
+    let match;
+    while ((match = identifierRegex.exec(cleanedLine)) !== null) {
+      const name = match[0];
+      if (
+        patterns.keyword.test(name) ||
+        patterns.builtinFunction.test(name) ||
+        declaredNames.has(name) ||
+        knownTypeNames.has(name) ||
+        /^[A-Z_][A-Z0-9_]*$/.test(name)
+      ) {
+        continue;
+      }
+
+      const charBefore = cleanedLine[match.index - 1] || '';
+      const twoCharsBefore = cleanedLine.slice(
+        Math.max(0, match.index - 2),
+        match.index,
+      );
+      if (
+        charBefore === '.' ||
+        twoCharsBefore === '->' ||
+        twoCharsBefore === '::'
+      ) {
+        continue;
+      }
+
+      let nextIndex = match.index + name.length;
+      while (
+        nextIndex < cleanedLine.length &&
+        /\s/.test(cleanedLine[nextIndex])
+      ) {
+        nextIndex++;
+      }
+      if (cleanedLine[nextIndex] === ':') continue;
+
+      const uniqueNameKey = `${lineNumber}:${name}`;
+      if (lineSeenNames.has(uniqueNameKey)) continue;
+      lineSeenNames.add(uniqueNameKey);
+      errors.push({
+        message: `Possible undefined variable '${name}'`,
+        line: lineNumber,
+        column: match.index,
       });
     }
   });

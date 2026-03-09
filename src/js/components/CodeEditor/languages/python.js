@@ -68,6 +68,19 @@ export function highlight(code) {
 }
 
 /**
+ * Strips the comment portion from a line of Python code, respecting strings.
+ * e.g. 'x = 1  # comment' -> 'x = 1  '
+ * e.g. 'x = "he said # hi"' -> 'x = "he said # hi"' (# inside string preserved)
+ */
+function stripComment(line) {
+  // Match strings (to skip # inside them) OR a bare # which starts a comment.
+  // When we hit a bare #, return empty string to strip it and everything after.
+  return line.replace(/(["'])(?:\\.|(?!\1)[^\\])*\1|#.*/g, (m) =>
+    m.startsWith('#') ? '' : m,
+  );
+}
+
+/**
  * Returns syntax/error check results for the given Python code.
  * @param {string} code
  * @returns {{ message: string, line: number, column: number }[]}
@@ -135,7 +148,12 @@ export function checkSyntax(code) {
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
     const trimmedLine = line.trim();
+    // Skip blank lines and pure comment lines
     if (!trimmedLine || trimmedLine.startsWith('#')) return;
+
+    // Strip inline comment before running all checks
+    const codeOnly = stripComment(trimmedLine).trim();
+    if (!codeOnly) return; // line was only a comment after stripping
 
     let hasMissingQuoteError = false;
     const indentationLevel = line.length - line.trimStart().length;
@@ -147,7 +165,7 @@ export function checkSyntax(code) {
       scopes.push({ indent: indentationLevel, names: new Set() });
     }
 
-    if (trimmedLine && indentationLevel % 4 !== 0) {
+    if (indentationLevel % 4 !== 0) {
       errors.push({
         message: 'Inconsistent indentation (should be multiples of 4 spaces)',
         line: lineNumber,
@@ -155,6 +173,7 @@ export function checkSyntax(code) {
       });
     }
 
+    // Colon check — run against codeOnly so trailing comments don't interfere
     const colonRequiredKeywords = [
       'def',
       'class',
@@ -168,9 +187,9 @@ export function checkSyntax(code) {
       'finally',
     ];
     const needsColon = colonRequiredKeywords.some((k) =>
-      trimmedLine.startsWith(k),
+      codeOnly.startsWith(k),
     );
-    if (needsColon && !trimmedLine.endsWith(':')) {
+    if (needsColon && !codeOnly.endsWith(':')) {
       errors.push({
         message: 'Missing colon after control structure or definition',
         line: lineNumber,
@@ -178,13 +197,12 @@ export function checkSyntax(code) {
       });
     }
 
-    const assignMatch = trimmedLine.match(/^([a-zA-Z_]\w*)\s*=/);
+    // Track declared names using codeOnly
+    const assignMatch = codeOnly.match(/^([a-zA-Z_]\w*)\s*=/);
     if (assignMatch) currentScope().names.add(assignMatch[1]);
-    const forMatch = trimmedLine.match(/^for\s+([a-zA-Z_]\w*)\s+in\b/);
+    const forMatch = codeOnly.match(/^for\s+([a-zA-Z_]\w*)\s+in\b/);
     if (forMatch) currentScope().names.add(forMatch[1]);
-    const defMatch = trimmedLine.match(
-      /^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*:/,
-    );
+    const defMatch = codeOnly.match(/^def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*:/);
     if (defMatch) {
       currentScope().names.add(defMatch[1]);
       defMatch[2]
@@ -194,9 +212,10 @@ export function checkSyntax(code) {
         .forEach((arg) => currentScope().names.add(arg));
     }
 
-    const assignRhsMatch = trimmedLine.match(/^[^#]*=\s*(.+)$/);
+    // Missing quotes check — run against codeOnly
+    const assignRhsMatch = codeOnly.match(/^[^#]*=\s*(.+)$/);
     if (assignRhsMatch) {
-      const rhs = assignRhsMatch[1].split('#')[0].trim();
+      const rhs = assignRhsMatch[1].trim();
       const hasQuotes = rhs.includes('"') || rhs.includes("'");
       const wordyLiteral = /^[a-zA-Z_]\w*(\s+[a-zA-Z_]\w*)+$/.test(rhs);
       if (!hasQuotes && wordyLiteral) {
@@ -211,7 +230,7 @@ export function checkSyntax(code) {
 
     const callRegex = /([a-zA-Z_]\w*)\(([^()]*)\)/g;
     let callMatch;
-    while ((callMatch = callRegex.exec(trimmedLine)) !== null) {
+    while ((callMatch = callRegex.exec(codeOnly)) !== null) {
       const args = callMatch[2]
         .split(',')
         .map((a) => a.trim())
@@ -223,17 +242,18 @@ export function checkSyntax(code) {
           errors.push({
             message: 'Argument looks like a string literal missing quotes',
             line: lineNumber,
-            column: trimmedLine.indexOf(arg),
+            column: codeOnly.indexOf(arg),
           });
           hasMissingQuoteError = true;
         }
       }
     }
 
+    // Undefined variable check — run against codeOnly
     if (!hasMissingQuoteError) {
       const identifierRegex = /\b[a-zA-Z_]\w*\b/g;
       const stringLiteralRegex = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
-      const cleanedForVars = trimmedLine.replace(stringLiteralRegex, (m) =>
+      const cleanedForVars = codeOnly.replace(stringLiteralRegex, (m) =>
         ' '.repeat(m.length),
       );
       let match;
