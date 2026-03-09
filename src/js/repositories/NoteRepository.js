@@ -42,7 +42,14 @@ export class NoteRepository {
     }
   }
 
-  async addCellToNote(url, timestamp, content, cellType, targetTimestamp, languageId=null) {
+  async addCellToNote(
+    url,
+    timestamp,
+    content,
+    cellType,
+    targetTimestamp,
+    languageId = null,
+  ) {
     const notes = await this.getAllNotes();
     const newUrl = this.removeAllQueryParams(url);
     const noteToUpdate =
@@ -67,7 +74,13 @@ export class NoteRepository {
     }
   }
 
-  async updateCellContent(url, timestamp, content, cellType, languageId=null) {
+  async updateCellContent(
+    url,
+    timestamp,
+    content,
+    cellType,
+    languageId = null,
+  ) {
     const notes = await this.getAllNotes();
     const newUrl = this.removeAllQueryParams(url);
     const note = notes.find((note) => note.url === newUrl);
@@ -105,6 +118,18 @@ export class NoteRepository {
       }
     } catch (error) {
       console.error('Failed to delete note from storage:', error);
+      throw error;
+    }
+  }
+  //for dashboard view - delete entire note by URL
+  async deleteNoteByUrl(url) {
+    try {
+      const newUrl = this.removeAllQueryParams(url);
+      const notes = await this.getAllNotes();
+      const filtered = notes.filter((note) => note.url !== newUrl);
+      await this.indexDBService.set(NoteRepository.STORAGE_KEY, filtered);
+    } catch (error) {
+      console.error('Failed to delete note by URL:', error);
       throw error;
     }
   }

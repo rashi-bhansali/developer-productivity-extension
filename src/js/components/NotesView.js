@@ -428,7 +428,7 @@ export class NotesView {
     const timestamp = container.dataset.timestamp; // Assume timestamp is stored in a `data-timestamp` attribute.
     const addMarkdownButton = document.createElement('button');
     addMarkdownButton.classList.add('new-cell-buttons', 'markdown');
-    addMarkdownButton.textContent = '+ Markdown';
+    addMarkdownButton.textContent = '+ Text';
     addMarkdownButton.addEventListener('click', async () => {
       const markCell = {
         content: '',

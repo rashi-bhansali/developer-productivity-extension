@@ -21,7 +21,7 @@ class NotesApp {
 
     this.darkModeComponent.initializeSystemTheme(); // Sync with system theme
     this.darkModeComponent.initializeManualThemeToggle(
-      document.querySelector('header'), // Attach to sticky header so toggle stays sticky
+      document.getElementById('theme-toggle-container'), // Attach to sticky header so toggle stays sticky
     );
   }
 
@@ -103,4 +103,9 @@ class NotesApp {
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   new NotesApp();
+  document
+    .getElementById('open-dashboard-btn')
+    .addEventListener('click', () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('src/dashboard.html') });
+    });
 });

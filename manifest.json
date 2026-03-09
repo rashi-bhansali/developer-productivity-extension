@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DevInks",
-  "version": "1.0",
+  "version": "2.0",
   "description": "Web-Linked Notes For Developers: Create and save notes and code snippets tied to specific websites for future reference.",
   "action": {
     "default_popup": "src/entry.html",
@@ -13,5 +13,9 @@
   },
   "background": {
     "service_worker": "src/js/background.js"
-  }
+  },
+  "web_accessible_resources": [{
+    "resources": ["src/dashboard.html"],
+    "matches": ["<all_urls>"]
+  }]
 }

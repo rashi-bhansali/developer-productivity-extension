@@ -11,9 +11,14 @@
 <body>
     <div id="container">
       <header>
+        <button id="open-dashboard-btn" title="All Notes Dashboard" class="dashboard-btn">
+        <i class="fa-solid fa-table-list"></i>
+        </button>
         <div class="logo">
           <img src="assets/logo-light.png" alt="DevInks Logo" class="logo-image">
         </div>
+        <!-- DarkModeComponent injects #dark-mode-toggle into this div -->
+        <div id="theme-toggle-container"></div>
       </header>
     
       <main class="content">
