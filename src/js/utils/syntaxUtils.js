@@ -26,23 +26,26 @@ export const commonSyntaxChecks = (code, rules) => {
   const brackets = { '(': 0, '[': 0, '{': 0 };
   const bracketLines = { '(': 1, '[': 1, '{': 1 }; //track line where opened
 
-  let currentLine = 0;
+  let currentLine = 1;
   for (const char of cleanCode) {
-    if (char === '\n') { currentLine++; continue; }
+    if (char === '\n') {
+      currentLine++;
+      continue;
+    }
     if (char in brackets) {
       brackets[char]++;
       bracketLines[char] = currentLine; //update line when opened
     }
     if (Object.values(bracketPairs).includes(char)) {
       const openBracket = Object.keys(bracketPairs).find(
-        (key) => bracketPairs[key] === char
+        (key) => bracketPairs[key] === char,
       );
       if (brackets[openBracket] > 0) brackets[openBracket]--;
       else {
-        errors.push({ 
-          message: `Unbalanced ${char} bracket`, 
-          line: currentLine, 
-          column: 0 
+        errors.push({
+          message: `Unbalanced ${char} bracket`,
+          line: currentLine,
+          column: 0,
         });
       }
     }

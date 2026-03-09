@@ -318,12 +318,15 @@ body.dark-mode textarea.code-editor {
 body.dark-mode .syntax-overlay {
   background-color: #23262b;
   color: #dcdcdc;
-  border: 1px solid #4a4f56;
 }
 
 body.dark-mode .code-editor-header {
   background-color: #1f2226;
   border-bottom-color: #4a4f56;
+}
+
+body.dark-mode .editor-container {
+  border-color: #4a4f56;
 }
 
 body.dark-mode .code-cell-language-select {
@@ -616,6 +619,8 @@ textarea.code-editor{
 .editor-container {
   height: 300px;
   position: relative;
+  border: 1px solid var(--border-subtle);
+  border-top: none;
   border-radius: 0 0 8px 8px;
   overflow: hidden;
   resize: vertical;
@@ -623,8 +628,8 @@ textarea.code-editor{
   
   /* Shared typography for both overlay and textarea */
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.98rem;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 24px;
   font-variant-ligatures: none;
   font-feature-settings: "liga" 0;
 }
@@ -633,16 +638,22 @@ textarea.code-editor{
   position: absolute;
   inset: 0; /* top: 0; left: 0; right: 0; bottom: 0; */
   box-sizing: border-box;
-  padding: 0.5rem;
+  padding: 10px 12px;
   border-radius: 0 0 8px 8px;
+  border: 1px solid transparent;
   background-color: var(--surface-2);
   color: #000000;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  tab-size: 4;
   overflow: hidden;              /* textarea handles scroll */
   pointer-events: none;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
   line-height: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 /* Underlying textarea (real caret), fully aligned with overlay */
@@ -652,17 +663,25 @@ textarea.code-editor{
   height: 100%;
   inset: 0; /* top: 0; left: 0; right: 0; bottom: 0; */
   box-sizing: border-box;
-  padding: 0.5rem;
+  padding: 10px 12px;
   border-radius: 0 0 8px 8px;
+  border: 1px solid transparent;
   background-color: transparent;
   color: transparent;            /* hide text, keep caret visible */
   caret-color: #000000;          /* overridden in dark mode rule you already have */
-  border: none;
   resize: none;
   outline: none;
   overflow: auto;
-  font: inherit;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  tab-size: 4;
+  font-family: inherit;
+  font-size: inherit;
   line-height: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
+  -webkit-text-fill-color: transparent;
 }
 
 
