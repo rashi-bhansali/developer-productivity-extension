@@ -2,16 +2,16 @@
 
 ![DevInks](https://github.com/user-attachments/assets/7f31b63d-8ebf-4bd7-b350-a5b93b8df165)
 
-DevInks is a Chrome extension that allows you to take rich markdown notes and code snippets directly on any webpage. The extension supports both dark mode and light mode, provides a user-friendly Markdown toolbar, enables code editing in Python, JS & C++, and preserves note states between sessions, ensuring your notes are always there when you need them.
+DevInks is a Chrome extension that allows you to take rich text or markdown notes and code snippets directly on any webpage. The extension supports both dark mode and light mode, provides a user-friendly Markdown toolbar, enables code editing in Python, JS & C++, persists notes per-website, between sessions. It also includes a Notes Dashboard to view and manage all your notes across every site, from one place.
 
 ## Features
 
-* **Markdown Support** :
+* **Text Notes with Markdown Support** :
 
-  Create and edit notes with full Markdown support. A dedicated Markdown toolbar helps you quickly insert headings, bold text, italics, strikethrough, underline, code blocks, and more.
+  Create and edit notes with full Markdown support. A dedicated toolbar helps you quickly insert headings, bold text, italics, strikethrough, underline, code blocks, and more.
 * **Markdown/Rendered Toggle** :
 
-  Easily switch between raw markdown editing and rendered markdown preview using the preview toggle button (eye-icon). When rendered, the Markdown toolbar is hidden for a distraction-free reading experience.
+  Easily switch between text or raw markdown editing and rendered preview using the preview toggle button (eye-icon). When rendered, the Markdown toolbar is hidden for a distraction-free reading experience.
 
 ![Markdown](admin/pictures/markdown.gif)
 
@@ -20,13 +20,17 @@ DevInks is a Chrome extension that allows you to take rich markdown notes and co
   Add code cells to your notes with support for  **Python** ,  **JavaScript** , and  **C++** . Select your language from the dropdown in each code cell. The editor highlights keywords, strings, comments, numbers, functions, operators, and built-ins for each language. Basic syntax checks surface common errors inline as you type.
 
   <img src="admin/pictures/code.png" alt="Code" width="400" height="480">
-
 * **Language Persistence** :
 
   The selected language for each code cell is saved and restored across sessions. Switching languages prompts a confirmation to avoid accidentally clearing existing code.
+* **Notes Dashboard** :
+
+  Never lose a note because you forgot which website it was on. Click the dashboard icon in the extension header to open a full-tab view of all your notes across every website - your personal notes inbox for the web. Each entry shows the URL, a preview of the first cell, cell count, and date. Jump back to the original page or delete a site's notes directly from the dashboard.
+
+  ![Dashboard](admin/pictures/dashboard.png)
 * **Dark Mode Compatibility** :
 
-  The extension automatically respects system-level dark mode preferences. A toggle button also lets you manually switch between light and dark modes, providing a comfortable writing environment for any lighting condition.
+  The extension automatically respects system-level dark mode preferences. A toggle button also lets you manually switch between light and dark modes.
 
 ![Darkmode](admin/pictures/darkmode.gif)
 
@@ -71,22 +75,27 @@ DevInks is a Chrome extension that allows you to take rich markdown notes and co
    Click the extension's icon to open DevInks on the current webpage.
 2. **Add and Edit Notes** :
 
-* Click on **"+ Markdown"** or **"+ Code"** to create new cells.
-* For Markdown cells: type in markdown, toggle between raw and rendered view using the preview button.
+* Click on **"+ Text"** or **"+ Code"** to create new cells.
+* For Text cells: type in text or markdown, toggle between raw and rendered view using the eye icon.
 * For Code cells: select your language (Python, JavaScript, or C++) from the dropdown, then enjoy syntax highlighting and inline syntax checks as you type.
 
-1. **Markdown Toolbar** :
+3. **Notes Dashboard** :
+
+* Click the dashboard icon (top-left of the extension header) to open a full-tab view of all notes across every website.
+* Preview content, jump to the original page, or delete a site's notes from the dashboard.
+
+4. **Markdown Toolbar** :
 
 * Insert headings, bold, italic, underline, strike-through text, code blocks, horizontal rules, and links using the toolbar buttons.
 * Hover over the toolbar buttons to see their tooltips, or use keyboard shortcuts for faster editing.
 
-1. **Dark Mode Toggle** :
+5. **Dark Mode Toggle** :
 
-* A circular toggle button appears in the corner of the note container.
+* A toggle button appears in the extension header.
 * Click it to switch between light and dark themes.
 * The extension also respects your system-level dark mode preference.
 
-1. **Preservation of State** :
+6. **Preservation of State** :
 
 * Close the extension and reopen it later; your notes and their states remain as you left them.
 * Markdown cells that were rendered will return in rendered form. Code cells restore both their content and the selected language.
