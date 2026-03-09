@@ -13,26 +13,27 @@ DevInks is a Chrome extension that allows you to take rich text or markdown note
 
   Easily switch between text or raw markdown editing and rendered preview using the preview toggle button (eye-icon). When rendered, the Markdown toolbar is hidden for a distraction-free reading experience.
 
-![Markdown](admin/pictures/markdown.gif)
+![Markdown](admin/pictures/markdown.gif "Markdown Rendering Demo")
 
 * **Multi-Language Code Snippets with Syntax Highlighting** :
 
   Add code cells to your notes with support for  **Python** ,  **JavaScript** , and  **C++** . Select your language from the dropdown in each code cell. The editor highlights keywords, strings, comments, numbers, functions, operators, and built-ins for each language. Basic syntax checks surface common errors inline as you type.
 
-  <img src="admin/pictures/code.png" alt="Code" width="400" height="480">
+  ![Code](admin/pictures/code.gif "Code Snippet Demo")
 * **Language Persistence** :
 
   The selected language for each code cell is saved and restored across sessions. Switching languages prompts a confirmation to avoid accidentally clearing existing code.
+* 
 * **Notes Dashboard** :
 
   Never lose a note because you forgot which website it was on. Click the dashboard icon in the extension header to open a full-tab view of all your notes across every website - your personal notes inbox for the web. Each entry shows the URL, a preview of the first cell, cell count, and date. Jump back to the original page or delete a site's notes directly from the dashboard.
 
-  ![Dashboard](admin/pictures/dashboard.png)
-* **Dark Mode Compatibility** :
+  <img src="admin/pictures/dashboard.png" alt="Code" width="600" height="400">
 
-  The extension automatically respects system-level dark mode preferences. A toggle button also lets you manually switch between light and dark modes.
+  **Dark Mode Compatibility** :
+* The extension automatically respects system-level dark mode preferences. A toggle button also lets you manually switch between light and dark modes.
 
-![Darkmode](admin/pictures/darkmode.gif)
+![Darkmode](admin/pictures/darkmode.gif "Theme Switch Demo")
 
 * **Keyboard Shortcuts** :
 
