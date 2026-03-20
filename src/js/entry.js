@@ -11,14 +11,16 @@ class NotesApp {
     this.notesView = new NotesView(document.getElementById('container'));
     // This is the service for managing dark mode
     this.darkModeComponent = new DarkModeComponent();
+    this.activeTabId = null;
+    this.activeUrl = null;
 
     this.initialize();
   }
 
   async initialize() {
     this.setupEventListeners();
-    await this.loadNotes();
-
+    this.setupTabListeners();
+    await this.syncWithActiveTab(true);
     this.darkModeComponent.initializeSystemTheme(); // Sync with system theme
     this.darkModeComponent.initializeManualThemeToggle(
       document.getElementById('theme-toggle-container'), // Attach to sticky header so toggle stays sticky
@@ -27,7 +29,7 @@ class NotesApp {
 
   async loadNotes() {
     try {
-      const url = await this.getUrl();
+      const url = this.activeUrl || (await this.getUrl());
       const note =
         (await this.noteRepository.getNoteByUrl(url)) ||
         (await this.noteRepository.addNote(url));
@@ -38,24 +40,76 @@ class NotesApp {
     }
   }
 
+  setupTabListeners() {
+    chrome.tabs.onActivated.addListener(async () => {
+      await this.syncWithActiveTab();
+    });
+
+    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+      if (!tab.active) return;
+      if (!changeInfo.url && changeInfo.status !== 'complete') return;
+      if (this.activeTabId !== null && tabId !== this.activeTabId) return;
+
+      await this.syncWithActiveTab(true);
+    });
+  }
+
+  async syncWithActiveTab(forceReload = false) {
+    try {
+      const tab = await this.getActiveTab();
+      if (!tab?.url) {
+        return;
+      }
+
+      const normalizedUrl = this.noteRepository.removeAllQueryParams(tab.url);
+      const shouldReload =
+        forceReload ||
+        this.activeTabId !== tab.id ||
+        this.activeUrl !== normalizedUrl;
+
+      if (!shouldReload) {
+        return;
+      }
+
+      this.activeTabId = tab.id;
+      this.activeUrl = normalizedUrl;
+      this.notesView.reset();
+      await this.loadNotes();
+    } catch (error) {
+      console.error('Error while syncing side panel with active tab', error);
+    }
+  }
+
   setupEventListeners() {
     this.notesView.setOnDeleteCell(
-      async (timestamp) => await this.handleDeleteCell(timestamp),
+      async (url, timestamp) => await this.handleDeleteCell(url, timestamp),
     );
     this.notesView.setOnAddCell(
-      async (timestamp, content, cellType, targetTimestamp) =>
-        await this.handleAddCell(timestamp, content, cellType, targetTimestamp),
+      async (url, timestamp, content, cellType, targetTimestamp) =>
+        await this.handleAddCell(
+          url,
+          timestamp,
+          content,
+          cellType,
+          targetTimestamp,
+        ),
     );
     this.notesView.setOnUpdateCell(
-      async (timestamp, content, cellType, languageId) =>
-        await this.handleUpdateCell(timestamp, content, cellType, languageId),
+      async (url, timestamp, content, cellType, languageId) =>
+        await this.handleUpdateCell(
+          url,
+          timestamp,
+          content,
+          cellType,
+          languageId,
+        ),
     );
   }
 
-  async handleAddCell(timestamp, content, cellType, targetTimestamp) {
+  async handleAddCell(url, timestamp, content, cellType, targetTimestamp) {
     try {
       await this.noteRepository.addCellToNote(
-        await this.getUrl(),
+        url,
         timestamp,
         content,
         cellType,
@@ -66,21 +120,18 @@ class NotesApp {
     }
   }
 
-  async handleDeleteCell(timestamp) {
+  async handleDeleteCell(url, timestamp) {
     try {
-      await this.noteRepository.deleteCellFromNote(
-        await this.getUrl(),
-        timestamp,
-      );
+      await this.noteRepository.deleteCellFromNote(url, timestamp);
     } catch (error) {
       console.error('Error in deleting cell from the note', error);
     }
   }
 
-  async handleUpdateCell(timestamp, content, cellType, languageId = null) {
+  async handleUpdateCell(url, timestamp, content, cellType, languageId = null) {
     try {
       await this.noteRepository.updateCellContent(
-        await this.getUrl(),
+        url,
         timestamp,
         content,
         cellType,
@@ -92,11 +143,16 @@ class NotesApp {
   }
 
   async getUrl() {
+    const tab = await this.getActiveTab();
+    return tab?.url;
+  }
+
+  async getActiveTab() {
     const [tab] = await chrome.tabs.query({
       active: true,
-      currentWindow: true,
+      lastFocusedWindow: true,
     });
-    return tab.url;
+    return tab;
   }
 }
 

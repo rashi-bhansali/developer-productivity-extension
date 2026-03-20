@@ -1,8 +1,9 @@
 export class MarkdownToolBar {
-  constructor(cell, cellContainer, onUpdateCell) {
+  constructor(cell, cellContainer, onUpdateCell, noteUrl = null) {
     this.cellContainer = cellContainer;
     this.textArea = cellContainer.querySelector('textarea');
     this.onUpdateCell = onUpdateCell;
+    this.noteUrl = noteUrl;
     this.toolbar = document.createElement('div');
     this.toolbar.classList.add('markdown-toolbar'); // Style using CSS
     this.cell = cell;
@@ -194,7 +195,12 @@ export class MarkdownToolBar {
 
     if (this.onUpdateCell) {
       const timestamp = this.cell.timestamp;
-      this.onUpdateCell(timestamp, this.textArea.value, 'markdown');
+      this.onUpdateCell(
+        this.noteUrl,
+        timestamp,
+        this.textArea.value,
+        'markdown',
+      );
     }
   }
 

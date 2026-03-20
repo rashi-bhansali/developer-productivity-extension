@@ -12,6 +12,16 @@ export class NotesView {
     this.onDeleteCell = null;
     this.onAddCell = null;
     this.onUpdateCell = null;
+    this.currentNoteUrl = null;
+  }
+
+  reset() {
+    this.container.querySelectorAll('.cell-container').forEach((cell) => {
+      cell.remove();
+    });
+    document.querySelectorAll('.code-error-tooltip').forEach((tooltip) => {
+      tooltip.remove();
+    });
   }
 
   // This is to set the callback for when a note is deleted in NoteListView
@@ -28,6 +38,8 @@ export class NotesView {
   }
 
   async render(note) {
+    this.currentNoteUrl = note?.url || null;
+
     // Ensure that the container is only cleared when necessary
     // Only clear if there are no cells to render or the note has changed
     if (!note || !note.cells || note.cells.length === 0) {
@@ -41,6 +53,7 @@ export class NotesView {
       };
       if (this.onAddCell) {
         await this.onAddCell(
+          this.currentNoteUrl,
           defaultCell.timestamp,
           defaultCell.content,
           defaultCell.cellType,
@@ -49,7 +62,11 @@ export class NotesView {
         ); //targetTimestamp empty for a default cell
       }
 
-      this.addCellAfterCurrent(this.container, defaultCell);
+      this.addCellAfterCurrent(
+        this.container,
+        defaultCell,
+        this.currentNoteUrl,
+      );
 
       return;
     }
@@ -62,15 +79,20 @@ export class NotesView {
     note.cells.forEach((cell) => {
       if (!renderedTimestamps.includes(cell.timestamp.toString())) {
         console.log('Rendering new cell', cell);
-        this.addCellAfterCurrent(this.container, cell);
+        this.addCellAfterCurrent(this.container, cell, this.currentNoteUrl);
       }
     });
   }
 
-  async addCellAfterCurrent(cellContainer, cell) {
+  async addCellAfterCurrent(
+    cellContainer,
+    cell,
+    noteUrl = this.currentNoteUrl,
+  ) {
     const newCellContainer = document.createElement('div');
     newCellContainer.classList.add('cell-container');
     newCellContainer.dataset.timestamp = cell.timestamp; // Add timestamp for tracking
+    newCellContainer.dataset.noteUrl = noteUrl || '';
 
     // Create the cell
     const newCell = document.createElement('div');
@@ -183,6 +205,7 @@ export class NotesView {
         saveTimeout = setTimeout(
           () =>
             this.onUpdateCell(
+              noteUrl,
               cell.timestamp,
               codeTextarea.value,
               'code',
@@ -291,7 +314,7 @@ export class NotesView {
           codeTextarea.value = '';
           syntaxOverlay.innerHTML = '';
           errorSpans = [];
-          this.onUpdateCell(cell.timestamp, '', 'code', newLanguage);
+          this.onUpdateCell(noteUrl, cell.timestamp, '', 'code', newLanguage);
         }
 
         // Only update tracked language if user confirmed or cell was empty
@@ -338,7 +361,13 @@ export class NotesView {
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(
           () =>
-            this.onUpdateCell(cell.timestamp, textarea.value, 'markdown', null),
+            this.onUpdateCell(
+              noteUrl,
+              cell.timestamp,
+              textarea.value,
+              'markdown',
+              null,
+            ),
           500,
         );
       });
@@ -363,6 +392,7 @@ export class NotesView {
           cell,
           cellContent,
           this.onUpdateCell,
+          noteUrl,
         );
         const toolbarElement = toolbar.render();
         newCell.appendChild(toolbarElement);
@@ -386,6 +416,7 @@ export class NotesView {
           cell,
           cellContent,
           this.onUpdateCell,
+          noteUrl,
         );
         const toolbarElement = toolbar.render();
         newCell.appendChild(toolbarElement);
@@ -423,6 +454,7 @@ export class NotesView {
   }
 
   addNewCellButtons(container) {
+    const noteUrl = container.dataset.noteUrl || this.currentNoteUrl;
     const addNewButtons = document.createElement('div');
     addNewButtons.classList.add('add-new-buttons');
     const timestamp = container.dataset.timestamp; // Assume timestamp is stored in a `data-timestamp` attribute.
@@ -438,6 +470,7 @@ export class NotesView {
       };
       if (this.onAddCell) {
         await this.onAddCell(
+          noteUrl,
           markCell.timestamp,
           markCell.content,
           markCell.cellType,
@@ -445,7 +478,7 @@ export class NotesView {
           markCell.languageId,
         );
       }
-      await this.addCellAfterCurrent(container, markCell);
+      await this.addCellAfterCurrent(container, markCell, noteUrl);
     });
 
     const addCodeButton = document.createElement('button');
@@ -460,6 +493,7 @@ export class NotesView {
       };
       if (this.onAddCell) {
         await this.onAddCell(
+          noteUrl,
           codeCell.timestamp,
           codeCell.content,
           codeCell.cellType,
@@ -467,7 +501,7 @@ export class NotesView {
           codeCell.languageId,
         );
       }
-      await this.addCellAfterCurrent(container, codeCell);
+      await this.addCellAfterCurrent(container, codeCell, noteUrl);
     });
 
     const hr = document.createElement('hr');
@@ -485,6 +519,7 @@ export class NotesView {
     if (!markdownBtn) return;
 
     const cell = markdownBtn.closest('.cell-container');
+    const noteUrl = cell.dataset.noteUrl || this.currentNoteUrl;
     const cellShell = cell.querySelector('.cell');
     const cellContent = cell.querySelector('.cell-content');
     const textarea = cellContent.querySelector('textarea');
@@ -517,6 +552,7 @@ export class NotesView {
       }
       if (this.onUpdateCell) {
         await this.onUpdateCell(
+          noteUrl,
           cell.dataset.timestamp,
           textarea.value,
           icon.classList.contains('fa-markdown-off')
@@ -549,6 +585,7 @@ export class NotesView {
       }
       if (this.onUpdateCell) {
         await this.onUpdateCell(
+          noteUrl,
           cell.dataset.timestamp,
           textarea.value,
           icon.classList.contains('fa-markdown-off')
@@ -569,11 +606,12 @@ export class NotesView {
     }
 
     const cellContainer = deleteBtn.closest('.cell-container');
+    const noteUrl = cellContainer.dataset.noteUrl || this.currentNoteUrl;
     const timestamp = cellContainer.dataset.timestamp; // Assume timestamp is stored in a `data-timestamp` attribute.
     if (this.onDeleteCell) {
       try {
         // Await the deletion from the database
-        await this.onDeleteCell(timestamp);
+        await this.onDeleteCell(noteUrl, timestamp);
 
         // If successful, remove the DOM node
         if (cellContainer) {
@@ -627,12 +665,19 @@ export class NotesView {
       // Trigger the add cell logic
       if (this.onAddCell) {
         this.onAddCell(
+          this.currentNoteUrl,
           defaultCell.timestamp,
           defaultCell.content,
           defaultCell.cellType,
           null, // No target timestamp
           defaultCell.languageId,
-        ).then(() => this.addCellAfterCurrent(this.container, defaultCell));
+        ).then(() =>
+          this.addCellAfterCurrent(
+            this.container,
+            defaultCell,
+            this.currentNoteUrl,
+          ),
+        );
       }
     }
   }

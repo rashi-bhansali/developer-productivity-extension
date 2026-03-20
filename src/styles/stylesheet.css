@@ -7,10 +7,12 @@
   --surface-2: #ffffff;
   --border-subtle: #c8ccd1;
   --text-primary: #252729;
+  --code-font-size: 14px;
 }
 html
 {
-  width: 500px;  /* max: 800px */
+  width: 100%;
+  max-width: 100%;
   background-color: var(--surface-0);
 }
 
@@ -32,8 +34,12 @@ body {
 
 #container {
   background-color: transparent;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   min-height: 100vh;
 }
+
 
 .container {
   max-width: 800px;
@@ -42,10 +48,11 @@ body {
 }
 
 header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   padding: 8px 12px;
-  justify-content: space-between;
   align-items: center;
+  column-gap: 12px;
   margin-bottom: 6px;
   position: sticky;
   top: 0;
@@ -56,10 +63,17 @@ header {
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
 }
 
+.logo {
+  display: flex;
+  justify-content: center;
+}
+
 .logo-image {
-  margin-top: 0;
+  display: block;
   max-height: 40px;
-  content: var(--logo-image);
+  width: auto;
+  height: 40px;
+  object-fit: contain;
 }
 
 
@@ -88,7 +102,7 @@ text-shadow: 0 0 14px rgb(96 179 214 / 25%);
 
 .description {
   margin: 0 0 14px;
-  font-size: 1.1rem;
+  font-size: 0.98rem;
   font-weight: 700;
   text-align: center;
 }
@@ -137,10 +151,12 @@ resize: vertical; /* Allow vertical resizing only */
 box-sizing: border-box; /* Include padding/border in size */
 border: 1px solid var(--border-subtle);
 border-radius: 8px;
-padding: 10px 12px;
+padding: 10px 18px 10px 12px;
 font-size: 1rem;
 line-height: 1.45;
 font-family: inherit;
+overflow-x: hidden;
+overflow-y: auto;
 }
 
 .rendered-content {
@@ -214,6 +230,33 @@ z-index: 2;
 
 .markdown-btn i {
   pointer-events: none;
+}
+
+.markdown-cell {
+  padding-top: 64px;
+}
+
+.markdown-cell .markdown-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  width: fit-content;
+  max-width: calc(100% - 96px);
+  margin: 0;
+  min-height: 40px;
+  box-sizing: border-box;
+  align-items: center;
+}
+
+.markdown-cell .delete-btn,
+.markdown-cell .markdown-btn {
+  top: 18px;
+}
+
+.markdown-cell .cell-content,
+.markdown-cell.is-preview .cell-content {
+  margin-top: 0;
 }
 
 .add-new-buttons {
@@ -365,9 +408,7 @@ body.dark-mode .add-new-buttons > hr {
 }
 
 #dark-mode-toggle {
-  position: absolute; /* Relative to the container */
-  top: 13px; /* Align at the top */
-  right: 13px; /* Align at the right */
+  position: relative;
   width: 70px;
   height: 32px;
   background-color: #dde1e7;
@@ -458,7 +499,6 @@ button:disabled {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 5px; /* Spacing between buttons */
-  margin-left: 4px;
   padding: 6px;
   border: 1px solid var(--border-subtle); 
   border-radius: 8px;
@@ -628,7 +668,7 @@ textarea.code-editor{
   
   /* Shared typography for both overlay and textarea */
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 15px;
+  font-size: var(--code-font-size);
   line-height: 24px;
   font-variant-ligatures: none;
   font-feature-settings: "liga" 0;
@@ -638,7 +678,7 @@ textarea.code-editor{
   position: absolute;
   inset: 0; /* top: 0; left: 0; right: 0; bottom: 0; */
   box-sizing: border-box;
-  padding: 10px 12px;
+  padding: 10px 18px 10px 12px;
   border-radius: 0 0 8px 8px;
   border: 1px solid transparent;
   background-color: var(--surface-2);
@@ -663,7 +703,7 @@ textarea.code-editor{
   height: 100%;
   inset: 0; /* top: 0; left: 0; right: 0; bottom: 0; */
   box-sizing: border-box;
-  padding: 10px 12px;
+  padding: 10px 18px 10px 12px;
   border-radius: 0 0 8px 8px;
   border: 1px solid transparent;
   background-color: transparent;
@@ -813,6 +853,7 @@ body, header, main.content > button {
 /* Dashboard Styles */
 .dashboard-btn {
   flex-shrink: 0;
+  justify-self: start;
   background: none;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
@@ -844,4 +885,62 @@ body.dark-mode .dashboard-btn:hover {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-self: end;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --code-font-size: 13px;
+  }
+
+  header {
+    padding: 8px 10px;
+    column-gap: 8px;
+  }
+
+  .logo-image {
+    height: 32px;
+  }
+
+  .description {
+    font-size: 0.9rem;
+  }
+
+  main.content {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .content > * {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+  }
+
+  .cell {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .add-new-buttons {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .markdown-cell {
+    padding-top: 92px;
+  }
+
+  .markdown-cell .markdown-toolbar {
+    max-width: calc(100% - 80px);
+  }
+
+  .markdown-cell .delete-btn {
+    right: 8px;
+  }
+
+  .markdown-cell .markdown-btn {
+    right: 40px;
+  }
 }

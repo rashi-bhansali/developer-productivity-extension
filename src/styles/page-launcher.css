@@ -1,0 +1,54 @@
+:host {
+  --launcher-offset-top: 40vh;
+  --launcher-width: clamp(2.75rem, 3.2vw, 3.25rem);
+  --launcher-height: clamp(3.5rem, 4.2vw, 4rem);
+  --launcher-icon-size: clamp(1.5rem, 1.8vw, 1.75rem);
+  --launcher-border-color: #c8ccd1;
+  --launcher-surface: #ffffff;
+}
+
+.page-launcher {
+  position: fixed;
+  top: var(--launcher-offset-top);
+  right: 0;
+  z-index: 2147483647;
+  width: var(--launcher-width);
+  height: var(--launcher-height);
+  border: 1px solid var(--launcher-border-color);
+  border-right: none;
+  border-radius: 14px 0 0 14px;
+  background: var(--launcher-surface);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 12%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.page-launcher:hover,
+.page-launcher.is-opening {
+  transform: translateX(-4px);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 18%);
+}
+
+.page-launcher:focus-visible {
+  outline: 3px solid rgb(96 179 214 / 28%);
+  outline-offset: 3px;
+}
+
+.page-launcher img {
+  width: var(--launcher-icon-size);
+  height: var(--launcher-icon-size);
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  :host {
+    --launcher-width: clamp(2.5rem, 8vw, 2.875rem);
+    --launcher-height: clamp(3rem, 10vw, 3.5rem);
+    --launcher-icon-size: clamp(1.25rem, 4.8vw, 1.5rem);
+  }
+}
