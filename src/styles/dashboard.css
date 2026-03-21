@@ -49,6 +49,12 @@ body.dark-mode header {
   margin-bottom: 20px;
 }
 
+.dashboard-search-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
 .search-label {
   display: block;
   font-size: 0.8rem;
@@ -96,9 +102,9 @@ body.dark-mode header {
 }
 
 .search-status {
-  margin-top: 8px;
   font-size: 0.75rem;
   font-weight: 600;
+  text-align: right;
 }
 
 .search-status.semantic {
@@ -107,6 +113,57 @@ body.dark-mode header {
 
 .search-status.offline {
   color: #9a8b55;
+}
+
+.sync-progress {
+  margin-top: 10px;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.sync-progress.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sync-progress-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(96, 179, 214, 0.12);
+  overflow: hidden;
+}
+
+.sync-progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #60b3d6 0%, #6dc48d 100%);
+  transition: width 0.2s ease;
+}
+
+.sync-progress-text {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: #888;
+}
+
+.dashboard-metrics {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: #888;
+}
+
+.dashboard-metrics-divider {
+  opacity: 0.6;
+}
+
+.dashboard-metric-hidden {
+  display: none;
 }
 
 .dashboard-title {
@@ -423,6 +480,15 @@ body.dark-mode .search-status.semantic {
 
 body.dark-mode .search-status.offline {
   color: #c7b578;
+}
+
+body.dark-mode .sync-progress-bar {
+  background: rgba(96, 179, 214, 0.18);
+}
+
+body.dark-mode .sync-progress-text,
+body.dark-mode .dashboard-metrics {
+  color: #777;
 }
 
 body.dark-mode .note-card {

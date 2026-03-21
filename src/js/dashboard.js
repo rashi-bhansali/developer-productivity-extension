@@ -1,5 +1,13 @@
 import { NoteRepository } from './repositories/NoteRepository.js';
 import { semanticSearch, syncNote } from './services/ApiService.js';
+import { getTotalNotes } from './services/MetricsService.js';
+import {
+  finishSyncStatus,
+  getSyncState,
+  incrementSyncStatus,
+  startSyncStatus,
+  subscribeToSyncStatus,
+} from './services/SyncStatusService.js';
 import { parseMarkdown } from './utils/markdownRules.js';
 import {
   filterNotesByKeyword,
@@ -124,10 +132,21 @@ async function renderDashboard() {
   const notesList = document.getElementById('notes-list');
   const searchInput = document.getElementById('dashboard-search');
   const searchStatus = document.getElementById('dashboard-search-status');
+  const syncProgress = document.getElementById('dashboard-sync-progress');
+  const syncProgressFill = document.getElementById(
+    'dashboard-sync-progress-fill',
+  );
+  const syncProgressText = document.getElementById(
+    'dashboard-sync-progress-text',
+  );
+  const totalNotesMetric = document.getElementById('dashboard-total-notes');
+  const resultsMetric = document.getElementById('dashboard-results-count');
+  const metricsDivider = document.getElementById('dashboard-metrics-divider');
   let allNotes = [];
   let currentQuery = '';
   let debounceTimer;
   let latestSearchRequest = 0;
+  let syncHideTimeout;
 
   function setSearchStatusMode(mode) {
     searchStatus.className = `search-status ${mode}`;
@@ -135,9 +154,55 @@ async function renderDashboard() {
       mode === 'semantic' ? 'AI Search Enabled ✓' : 'Offline Mode';
   }
 
+  function isSearchActive(query = currentQuery) {
+    return Boolean(query && query.trim().length > 0);
+  }
+
+  function renderResultsMetric(resultsCount) {
+    const searchActive = isSearchActive();
+
+    resultsMetric.textContent = `Results: ${resultsCount}`;
+    resultsMetric.classList.toggle('dashboard-metric-hidden', !searchActive);
+    metricsDivider.classList.toggle('dashboard-metric-hidden', !searchActive);
+  }
+
+  async function refreshTotalNotesMetric() {
+    const totalNotes = await getTotalNotes();
+    totalNotesMetric.textContent = `Total Notes: ${totalNotes}`;
+  }
+
+  function renderSyncProgress(state) {
+    const { total, completed, inProgress } = state;
+    const progress = total > 0 ? (completed / total) * 100 : 0;
+
+    syncProgressFill.style.width = `${progress}%`;
+    syncProgressText.textContent = `Syncing notes... (${completed} / ${total})`;
+
+    if (inProgress) {
+      window.clearTimeout(syncHideTimeout);
+      syncProgress.classList.remove('hidden');
+      syncProgress.setAttribute('aria-hidden', 'false');
+      return;
+    }
+
+    if (total === 0 || completed < total) {
+      syncProgress.classList.add('hidden');
+      syncProgress.setAttribute('aria-hidden', 'true');
+      return;
+    }
+
+    window.clearTimeout(syncHideTimeout);
+    syncHideTimeout = window.setTimeout(() => {
+      syncProgress.classList.add('hidden');
+      syncProgress.setAttribute('aria-hidden', 'true');
+    }, 1200);
+  }
+
   function renderNotes(
     visibleNotes = filterNotesByKeyword(allNotes, currentQuery),
   ) {
+    renderResultsMetric(visibleNotes.length);
+
     if (visibleNotes.length === 0) {
       notesList.innerHTML = '';
 
@@ -178,13 +243,17 @@ async function renderDashboard() {
         allNotes,
       );
       const keywordResults = filterNotesByKeyword(allNotes, currentQuery);
+      const canUseSemanticResults =
+        semanticResults.length > 0 && !getSyncState().inProgress;
 
-      setSearchStatusMode('semantic');
-      renderNotes(
-        semanticResults.length > 0 || keywordResults.length === 0
-          ? semanticResults
-          : keywordResults,
-      );
+      if (canUseSemanticResults) {
+        setSearchStatusMode('semantic');
+        renderNotes(semanticResults);
+        return;
+      }
+
+      setSearchStatusMode('offline');
+      renderNotes(keywordResults);
     } catch (error) {
       if (requestId !== latestSearchRequest) return;
       console.error(
@@ -196,16 +265,36 @@ async function renderDashboard() {
     }
   }
 
+  async function syncExistingNotes(notes) {
+    startSyncStatus(notes.length);
+
+    await Promise.all(
+      notes.map(async (note) => {
+        try {
+          await syncNote(note);
+        } finally {
+          incrementSyncStatus();
+        }
+      }),
+    );
+
+    finishSyncStatus();
+
+    if (currentQuery) {
+      latestSearchRequest += 1;
+      await runSearch(currentQuery, latestSearchRequest);
+    }
+  }
+
   try {
     const notes = await noteRepository.getAllNotes();
     allNotes = notes.filter(noteHasSearchableContent);
     setSearchStatusMode('offline');
-
-    allNotes.forEach((note) => {
-      void syncNote(note);
-    });
+    await refreshTotalNotesMetric();
+    subscribeToSyncStatus(renderSyncProgress);
 
     renderNotes();
+    void syncExistingNotes(allNotes);
 
     searchInput.addEventListener('input', (event) => {
       const nextQuery = normalizeSearchQuery(event.target.value);
@@ -224,6 +313,7 @@ async function renderDashboard() {
       if (!didDelete) return;
 
       allNotes = allNotes.filter((note) => note.url !== btn.dataset.url);
+      await refreshTotalNotesMetric();
       await runSearch(currentQuery);
     });
   } catch (error) {

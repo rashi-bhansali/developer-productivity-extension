@@ -41,7 +41,7 @@ def delete_note(note_id: str):
     return deleted_note
 
 
-def search_notes(query_embedding: np.ndarray, limit: int = 5):
+def search_notes(query_embedding: np.ndarray, limit: int = 5, min_score: float = 0.0):
     if not _notes or _index is None:
         return []
     scores, indices = _index.search(np.asarray([query_embedding]), min(limit, len(_notes)))
@@ -53,5 +53,5 @@ def search_notes(query_embedding: np.ndarray, limit: int = 5):
             "score": float(scores[0][rank]),
         }
         for rank, i in enumerate(indices[0])
-        if i != -1
+        if i != -1 and float(scores[0][rank]) >= min_score
     ]

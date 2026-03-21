@@ -64,3 +64,4 @@ Response:
 ```
 
 Returns the top 5 in-memory matches. Data is lost on restart.
+Low-similarity matches are filtered out by a minimum score threshold, so unrelated queries can return zero results.

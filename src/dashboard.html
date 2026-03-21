@@ -36,6 +36,11 @@
         </div>
 
         <div class="dashboard-search">
+          <div class="dashboard-search-header">
+            <div id="dashboard-search-status" class="search-status offline">
+              Offline Mode
+            </div>
+          </div>
           <div class="search-input-wrapper">
             <i
               class="fa-solid fa-magnifying-glass search-icon"
@@ -49,8 +54,29 @@
               autocomplete="off"
             />
           </div>
-          <div id="dashboard-search-status" class="search-status offline">
-            Offline Mode
+          <div
+            id="dashboard-sync-progress"
+            class="sync-progress hidden"
+            aria-hidden="true"
+          >
+            <div class="sync-progress-bar">
+              <div
+                id="dashboard-sync-progress-fill"
+                class="sync-progress-fill"
+              ></div>
+            </div>
+            <div id="dashboard-sync-progress-text" class="sync-progress-text">
+              Syncing notes... (0 / 0)
+            </div>
+          </div>
+          <div class="dashboard-metrics">
+            <span id="dashboard-total-notes">Total Notes: 0</span>
+            <span
+              id="dashboard-metrics-divider"
+              class="dashboard-metrics-divider"
+              >|</span
+            >
+            <span id="dashboard-results-count">Results: 0</span>
           </div>
         </div>
 
