@@ -1,4 +1,10 @@
 import { NoteRepository } from './repositories/NoteRepository.js';
+import { parseMarkdown } from './utils/markdownRules.js';
+import {
+  filterNotesByKeyword,
+  normalizeSearchQuery,
+  noteHasSearchableContent,
+} from './utils/dashboardSearch.js';
 
 const noteRepository = new NoteRepository();
 
@@ -26,112 +32,6 @@ function formatDate(timestamp) {
   });
 }
 
-/**
- * Renders markdown to HTML, matching the extension's preview behaviour:
- * - Headings (h1–h3)
- * - Bold, italic, strikethrough, inline code
- * - Links -> <a> with theme blue
- * - Bullet lists (- or *)
- * - Horizontal rule ---
- * - Line breaks preserved
- */
-function renderMarkdownPreview(raw) {
-  if (!raw) return '';
-
-  const lines = raw.split('\n');
-  const htmlLines = [];
-  let inList = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-
-    // Headings
-    if (/^### (.+)/.test(line)) {
-      if (inList) {
-        htmlLines.push('</ul>');
-        inList = false;
-      }
-      htmlLines.push(`<h3>${line.replace(/^### /, '')}</h3>`);
-      continue;
-    }
-    if (/^## (.+)/.test(line)) {
-      if (inList) {
-        htmlLines.push('</ul>');
-        inList = false;
-      }
-      htmlLines.push(`<h2>${line.replace(/^## /, '')}</h2>`);
-      continue;
-    }
-    if (/^# (.+)/.test(line)) {
-      if (inList) {
-        htmlLines.push('</ul>');
-        inList = false;
-      }
-      htmlLines.push(`<h1>${line.replace(/^# /, '')}</h1>`);
-      continue;
-    }
-
-    // Horizontal rule
-    if (/^---+$/.test(line.trim())) {
-      if (inList) {
-        htmlLines.push('</ul>');
-        inList = false;
-      }
-      htmlLines.push('<hr>');
-      continue;
-    }
-
-    // Bullet list items (- or *)
-    if (/^(\s*)[-*] (.+)/.test(line)) {
-      if (!inList) {
-        htmlLines.push('<ul>');
-        inList = true;
-      }
-      const content = line.replace(/^(\s*)[-*] /, '');
-      htmlLines.push(`<li>${inlineFormat(content)}</li>`);
-      continue;
-    }
-
-    // Close list if open and line is not a list item
-    if (inList) {
-      htmlLines.push('</ul>');
-      inList = false;
-    }
-
-    // Empty line → paragraph break
-    if (line.trim() === '') {
-      htmlLines.push('<br>');
-      continue;
-    }
-
-    // Normal paragraph line
-    htmlLines.push(`<p>${inlineFormat(line)}</p>`);
-  }
-
-  if (inList) htmlLines.push('</ul>');
-
-  return htmlLines.join('');
-}
-
-function inlineFormat(text) {
-  return (
-    text
-      // Links — must come before other replacements
-      .replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
-      )
-      // Bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Strikethrough
-      .replace(/~~(.+?)~~/g, '<s>$1</s>')
-      // Inline code
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-  );
-}
-
 function getCellPreview(cell) {
   if (!cell || !cell.content || !cell.content.trim()) return null;
   if (cell.cellType === 'code') {
@@ -140,7 +40,7 @@ function getCellPreview(cell) {
       html: `<code>${cell.content.trim().slice(0, 120)}</code>`,
     };
   }
-  return { type: 'markdown', html: renderMarkdownPreview(cell.content) };
+  return { type: 'markdown', html: parseMarkdown(cell.content) };
 }
 
 function getCellTypeBadge(cell) {
@@ -192,26 +92,6 @@ function renderNoteCard(note) {
   `;
 }
 
-function noteHasContent(note) {
-  return (
-    note.cells &&
-    note.cells.length > 0 &&
-    note.cells.some((cell) => cell.content && cell.content.trim())
-  );
-}
-
-function matchesSearch(note, query) {
-  if (!query) return true;
-
-  const normalizedQuery = query.toLowerCase();
-  const urlMatches = (note.url || '').toLowerCase().includes(normalizedQuery);
-  const contentMatches = (note.cells || []).some((cell) =>
-    (cell.content || '').toLowerCase().includes(normalizedQuery),
-  );
-
-  return urlMatches || contentMatches;
-}
-
 function setEmptyState(isVisible, title, subtitle) {
   const emptyState = document.getElementById('empty-state');
   const emptyStateTitle = document.getElementById('empty-state-title');
@@ -246,9 +126,7 @@ async function renderDashboard() {
   let debounceTimer;
 
   function renderNotes() {
-    const visibleNotes = allNotes.filter((note) =>
-      matchesSearch(note, currentQuery),
-    );
+    const visibleNotes = filterNotesByKeyword(allNotes, currentQuery);
 
     if (visibleNotes.length === 0) {
       notesList.innerHTML = '';
@@ -275,12 +153,12 @@ async function renderDashboard() {
 
   try {
     const notes = await noteRepository.getAllNotes();
-    allNotes = notes.filter(noteHasContent);
+    allNotes = notes.filter(noteHasSearchableContent);
 
     renderNotes();
 
     searchInput.addEventListener('input', (event) => {
-      const nextQuery = event.target.value.trim().toLowerCase();
+      const nextQuery = normalizeSearchQuery(event.target.value);
       window.clearTimeout(debounceTimer);
       debounceTimer = window.setTimeout(() => {
         currentQuery = nextQuery;

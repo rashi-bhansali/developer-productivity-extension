@@ -105,11 +105,9 @@ export function parseMarkdown(markdownText) {
   // First, process nested lists
   htmlText = handleLists(htmlText);
 
-  console.log(htmlText);
   // Then, apply other markdown rules
   rules.forEach((rule) => {
     htmlText = htmlText.replace(rule.regex, rule.replacement);
   });
-  console.log(htmlText);
   return htmlText;
 }
