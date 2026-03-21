@@ -16,12 +16,33 @@ def store_note(note_id: str, content: str, url: str, embedding: np.ndarray):
     _notes.append(
         {"id": note_id, "content": content, "url": url, "embedding": embedding}
     )
-    _build_index(len(embedding))
-    _index.add(np.vstack([note["embedding"] for note in _notes]))
+    _rebuild_index(len(embedding))
+
+
+def _rebuild_index(dim: int):
+    _build_index(dim)
+    if _notes:
+        _index.add(np.vstack([note["embedding"] for note in _notes]))
+
+
+def delete_note(note_id: str):
+    global _notes, _index
+    deleted_note = next((note for note in _notes if note["id"] == note_id), None)
+    if not deleted_note:
+        raise ValueError(f"Note not found: {note_id}")
+
+    _notes = [note for note in _notes if note["id"] != note_id]
+
+    if _notes:
+        _rebuild_index(len(_notes[0]["embedding"]))
+    else:
+        _index = None
+
+    return deleted_note
 
 
 def search_notes(query_embedding: np.ndarray, limit: int = 5):
-    if not _notes:
+    if not _notes or _index is None:
         return []
     scores, indices = _index.search(np.asarray([query_embedding]), min(limit, len(_notes)))
     return [

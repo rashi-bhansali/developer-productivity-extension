@@ -13,11 +13,12 @@
     "default_icon": "src/assets/DevInks.png"
   },
   "permissions": ["storage", "tabs", "sidePanel"],
+  "host_permissions": ["http://127.0.0.1:8000/*", "http://localhost:8000/*"],
   "side_panel": {
     "default_path": "src/entry.html"
   },
   "content_security_policy": {
-  "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "background": {
     "service_worker": "src/js/background.js"
@@ -29,12 +30,14 @@
       "run_at": "document_idle"
     }
   ],
-  "web_accessible_resources": [{
-    "resources": [
-      "src/dashboard.html",
-      "src/assets/DevInks.png",
-      "src/styles/page-launcher.css"
-    ],
-    "matches": ["<all_urls>"]
-  }]
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/dashboard.html",
+        "src/assets/DevInks.png",
+        "src/styles/page-launcher.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

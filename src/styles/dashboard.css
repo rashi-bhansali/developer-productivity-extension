@@ -95,6 +95,20 @@ body.dark-mode header {
   color: #999;
 }
 
+.search-status {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.search-status.semantic {
+  color: #3d9b5a;
+}
+
+.search-status.offline {
+  color: #9a8b55;
+}
+
 .dashboard-title {
   font-family: 'Nunito', sans-serif;
   font-size: 1.6rem;
@@ -401,6 +415,14 @@ body.dark-mode .search-input {
 
 body.dark-mode .search-input::placeholder {
   color: #666;
+}
+
+body.dark-mode .search-status.semantic {
+  color: #75c98f;
+}
+
+body.dark-mode .search-status.offline {
+  color: #c7b578;
 }
 
 body.dark-mode .note-card {

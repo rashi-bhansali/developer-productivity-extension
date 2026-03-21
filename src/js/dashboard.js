@@ -1,7 +1,9 @@
 import { NoteRepository } from './repositories/NoteRepository.js';
+import { semanticSearch, syncNote } from './services/ApiService.js';
 import { parseMarkdown } from './utils/markdownRules.js';
 import {
   filterNotesByKeyword,
+  mapSemanticResultsToNotes,
   normalizeSearchQuery,
   noteHasSearchableContent,
 } from './utils/dashboardSearch.js';
@@ -121,13 +123,21 @@ async function handleDelete(url) {
 async function renderDashboard() {
   const notesList = document.getElementById('notes-list');
   const searchInput = document.getElementById('dashboard-search');
+  const searchStatus = document.getElementById('dashboard-search-status');
   let allNotes = [];
   let currentQuery = '';
   let debounceTimer;
+  let latestSearchRequest = 0;
 
-  function renderNotes() {
-    const visibleNotes = filterNotesByKeyword(allNotes, currentQuery);
+  function setSearchStatusMode(mode) {
+    searchStatus.className = `search-status ${mode}`;
+    searchStatus.textContent =
+      mode === 'semantic' ? 'AI Search Enabled ✓' : 'Offline Mode';
+  }
 
+  function renderNotes(
+    visibleNotes = filterNotesByKeyword(allNotes, currentQuery),
+  ) {
     if (visibleNotes.length === 0) {
       notesList.innerHTML = '';
 
@@ -151,18 +161,58 @@ async function renderDashboard() {
     notesList.innerHTML = visibleNotes.map(renderNoteCard).join('');
   }
 
+  async function runSearch(query, requestId = latestSearchRequest) {
+    currentQuery = query;
+
+    if (!currentQuery) {
+      if (requestId !== latestSearchRequest) return;
+      renderNotes(allNotes);
+      return;
+    }
+
+    try {
+      const response = await semanticSearch(currentQuery);
+      if (requestId !== latestSearchRequest) return;
+      const semanticResults = mapSemanticResultsToNotes(
+        response.results || [],
+        allNotes,
+      );
+      const keywordResults = filterNotesByKeyword(allNotes, currentQuery);
+
+      setSearchStatusMode('semantic');
+      renderNotes(
+        semanticResults.length > 0 || keywordResults.length === 0
+          ? semanticResults
+          : keywordResults,
+      );
+    } catch (error) {
+      if (requestId !== latestSearchRequest) return;
+      console.error(
+        'Semantic search unavailable, falling back to keyword search:',
+        error,
+      );
+      setSearchStatusMode('offline');
+      renderNotes();
+    }
+  }
+
   try {
     const notes = await noteRepository.getAllNotes();
     allNotes = notes.filter(noteHasSearchableContent);
+    setSearchStatusMode('offline');
+
+    allNotes.forEach((note) => {
+      void syncNote(note);
+    });
 
     renderNotes();
 
     searchInput.addEventListener('input', (event) => {
       const nextQuery = normalizeSearchQuery(event.target.value);
+      const requestId = ++latestSearchRequest;
       window.clearTimeout(debounceTimer);
-      debounceTimer = window.setTimeout(() => {
-        currentQuery = nextQuery;
-        renderNotes();
+      debounceTimer = window.setTimeout(async () => {
+        await runSearch(nextQuery, requestId);
       }, 300);
     });
 
@@ -174,7 +224,7 @@ async function renderDashboard() {
       if (!didDelete) return;
 
       allNotes = allNotes.filter((note) => note.url !== btn.dataset.url);
-      renderNotes();
+      await runSearch(currentQuery);
     });
   } catch (error) {
     console.error('Failed to load notes:', error);

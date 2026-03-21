@@ -23,6 +23,11 @@ class NoteOut(BaseModel):
     note: NoteMeta
 
 
+class NoteDeleteOut(BaseModel):
+    status: str
+    note: NoteMeta
+
+
 class SearchResult(BaseModel):
     id: str
     content: str
