@@ -9,9 +9,9 @@ const patterns = {
   comment: /\/\/[^\n]*|\/\*[\s\S]*?\*\//,
   string: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)/,
   keyword:
-    /\b(await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|function|if|import|in|instanceof|let|new|null|return|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield)\b/,
+    /\b(await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|function|if|import|in|instanceof|let|new|null|return|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield|async)\b/,
   builtinFunction:
-    /\b(console|setTimeout|setInterval|clearTimeout|clearInterval|parseInt|parseFloat|isNaN|isFinite|JSON|Math|Object|Array|String|Number|Boolean|Promise|Map|Set)\b/,
+    /\b(console|setTimeout|setInterval|clearTimeout|clearInterval|parseInt|parseFloat|isNaN|isFinite|JSON|Math|Object|Array|String|Number|Boolean|Promise|Map|Set|fetch)\b/,
   number: /\b(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?\b/,
   operator:
     /(\+\+|--|===|!==|==|!=|<=|>=|&&|\|\||=>|\?\.|\?\?|<<|>>|\+|-|\*|\/|%|=|\+=|-=|\*=|\/=|%=)/,
@@ -266,6 +266,7 @@ export function checkSyntax(code) {
     'while',
     'with',
     'yield',
+    'async',
   ]);
   const builtins = new Set([
     'console',
@@ -287,6 +288,7 @@ export function checkSyntax(code) {
     'Promise',
     'Map',
     'Set',
+    'fetch',
   ]);
   const extraGlobals = new Set([
     'window',

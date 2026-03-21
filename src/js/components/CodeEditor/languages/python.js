@@ -10,9 +10,9 @@ const patterns = {
   comment: /\s*#.*/,
   string: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/,
   keyword:
-    /\b(and|as|assert|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\b/,
+    /\b(and|as|assert|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield|next)\b/,
   builtinFunction:
-    /\b(print|len|range|type|int|str|float|list|dict|set|tuple|sum|min|max|abs|round|input)\b/,
+    /\b(print|len|range|type|int|str|float|list|dict|set|tuple|sum|min|max|abs|round|input|add|remove|append|sort)\b/,
   number: /\b(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?\b/,
   operator: /(\+|\-|\*|\/|%|\*\*|==|!=|<=|>=|<|>|=|\+=|\-=|\*=|\/=|%=|\*\*=)/,
   function: /\b[a-zA-Z_]\w*(?=\s*\()/,
@@ -122,6 +122,7 @@ export function checkSyntax(code) {
     'while',
     'with',
     'yield',
+    'next',
   ]);
   const builtins = new Set([
     'print',
@@ -141,6 +142,10 @@ export function checkSyntax(code) {
     'abs',
     'round',
     'input',
+    'add',
+    'remove',
+    'append',
+    'sort',
   ]);
   const scopes = [{ indent: 0, names: new Set() }];
   const currentScope = () => scopes[scopes.length - 1];

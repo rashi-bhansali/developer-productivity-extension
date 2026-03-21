@@ -15,6 +15,15 @@ export class NotesView {
     this.currentNoteUrl = null;
   }
 
+  prepareForTabChange() {
+    if (this.container.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+
+    this.currentNoteUrl = null;
+    this.reset();
+  }
+
   reset() {
     this.container.querySelectorAll('.cell-container').forEach((cell) => {
       cell.remove();

@@ -42,6 +42,7 @@ class NotesApp {
 
   setupTabListeners() {
     chrome.tabs.onActivated.addListener(async () => {
+      this.notesView.prepareForTabChange();
       await this.syncWithActiveTab();
     });
 
@@ -50,6 +51,7 @@ class NotesApp {
       if (!changeInfo.url && changeInfo.status !== 'complete') return;
       if (this.activeTabId !== null && tabId !== this.activeTabId) return;
 
+      this.notesView.prepareForTabChange();
       await this.syncWithActiveTab(true);
     });
   }
@@ -58,6 +60,8 @@ class NotesApp {
     try {
       const tab = await this.getActiveTab();
       if (!tab?.url) {
+        this.activeTabId = tab?.id || null;
+        this.activeUrl = null;
         return;
       }
 
@@ -73,7 +77,6 @@ class NotesApp {
 
       this.activeTabId = tab.id;
       this.activeUrl = normalizedUrl;
-      this.notesView.reset();
       await this.loadNotes();
     } catch (error) {
       console.error('Error while syncing side panel with active tab', error);
