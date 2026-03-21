@@ -1,4 +1,5 @@
 import { IndexedDBService } from '../services/IndexDBService.js';
+import { deleteSyncedNote, syncNote } from '../services/ApiService.js';
 import { Note, NoteCell } from '../models/Note.js';
 
 // This is layer between our app's business logic and the data storage layer
@@ -35,6 +36,7 @@ export class NoteRepository {
         ...notes,
         newNote,
       ]);
+      this.syncStoredNote(newNote);
       return newNote;
     } catch (error) {
       console.error('Failed to add note to storage:', error);
@@ -71,6 +73,7 @@ export class NoteRepository {
         noteToUpdate.cells.push(newCell);
       }
       await this.indexDBService.set(NoteRepository.STORAGE_KEY, notes);
+      this.syncStoredNote(noteToUpdate);
     }
   }
 
@@ -99,6 +102,7 @@ export class NoteRepository {
       // Save the updated note to the database
       await this.indexDBService.set(NoteRepository.STORAGE_KEY, notes);
       console.log('Updated cell content saved:', cell);
+      this.syncStoredNote(note);
     } else {
       console.error('Cell not found for updating content.');
     }
@@ -128,9 +132,20 @@ export class NoteRepository {
       const notes = await this.getAllNotes();
       const filtered = notes.filter((note) => note.url !== newUrl);
       await this.indexDBService.set(NoteRepository.STORAGE_KEY, filtered);
+      this.deleteSyncedStoredNote(newUrl);
     } catch (error) {
       console.error('Failed to delete note by URL:', error);
       throw error;
     }
+  }
+
+  syncStoredNote(note) {
+    if (!note) return;
+    void syncNote(note);
+  }
+
+  deleteSyncedStoredNote(noteId) {
+    if (!noteId) return;
+    void deleteSyncedNote(noteId);
   }
 }

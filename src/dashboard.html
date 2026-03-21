@@ -1,50 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DevInks - Notes Dashboard</title>
-  <link rel="icon" href="assets/DevInks.png" type="image/png">
-  <link rel="stylesheet" href="styles/stylesheet.css">
-  <link rel="stylesheet" href="styles/dashboard.css">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script type="module" src="js/dashboard.js"></script>
-</head>
-<body>
-  <div id="container">
-    <header>
-      <div class="logo">
-        <img src="assets/logo-light.png" alt="DevInks Logo" class="logo-image">
-      </div>
-    </header>
-
-    <main class="dashboard-content">
-      <div class="dashboard-header">
-        <h2 class="dashboard-title">Your Notes <span class="highlight">Across the Web</span></h2>
-        <p class="dashboard-subtitle">All your notes, every website, one place.</p>
-      </div>
-
-      <div class="dashboard-search">
-        <div class="search-input-wrapper">
-          <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
-          <input
-            id="dashboard-search"
-            class="search-input"
-            type="search"
-            placeholder="Search by note content or URL"
-            autocomplete="off"
-          >
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevInks - Notes Dashboard</title>
+    <link rel="icon" href="assets/DevInks.png" type="image/png" />
+    <link rel="stylesheet" href="styles/stylesheet.css" />
+    <link rel="stylesheet" href="styles/dashboard.css" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <script type="module" src="js/dashboard.js"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header>
+        <div class="logo">
+          <img
+            src="assets/logo-light.png"
+            alt="DevInks Logo"
+            class="logo-image"
+          />
         </div>
-      </div>
+      </header>
 
-      <div id="notes-list"></div>
+      <main class="dashboard-content">
+        <div class="dashboard-header">
+          <h2 class="dashboard-title">
+            Your Notes <span class="highlight">Across the Web</span>
+          </h2>
+          <p class="dashboard-subtitle">
+            All your notes, every website, one place.
+          </p>
+        </div>
 
-      <div id="empty-state" class="empty-state" style="display: none;">
-        <i class="fa-regular fa-note-sticky empty-icon"></i>
-        <p id="empty-state-title">No notes yet.</p>
-        <p id="empty-state-subtitle" class="empty-sub">Open any webpage and start writing in DevInks.</p>
-      </div>
-    </main>
-  </div>
-</body>
+        <div class="dashboard-search">
+          <div class="dashboard-search-header">
+            <div id="dashboard-search-status" class="search-status offline">
+              Offline Mode
+            </div>
+          </div>
+          <div class="search-input-wrapper">
+            <i
+              class="fa-solid fa-magnifying-glass search-icon"
+              aria-hidden="true"
+            ></i>
+            <input
+              id="dashboard-search"
+              class="search-input"
+              type="search"
+              placeholder="Search by note content or URL"
+              autocomplete="off"
+            />
+            <button id="dashboard-ask-ai-btn" class="ask-ai-btn" type="button">
+              Ask AI
+            </button>
+          </div>
+          <div
+            id="dashboard-sync-progress"
+            class="sync-progress hidden"
+            aria-hidden="true"
+          >
+            <div class="sync-progress-bar">
+              <div
+                id="dashboard-sync-progress-fill"
+                class="sync-progress-fill"
+              ></div>
+            </div>
+            <div id="dashboard-sync-progress-text" class="sync-progress-text">
+              Syncing notes... (0 / 0)
+            </div>
+          </div>
+          <div class="dashboard-metrics">
+            <span id="dashboard-total-notes">Total Notes: 0</span>
+            <span
+              id="dashboard-metrics-divider"
+              class="dashboard-metrics-divider"
+              >|</span
+            >
+            <span id="dashboard-results-count">Results: 0</span>
+          </div>
+        </div>
+
+        <div class="dashboard-main">
+          <div class="dashboard-notes-column">
+            <div id="notes-list"></div>
+
+            <div id="empty-state" class="empty-state" style="display: none">
+              <i class="fa-regular fa-note-sticky empty-icon"></i>
+              <p id="empty-state-title">No notes yet.</p>
+              <p id="empty-state-subtitle" class="empty-sub">
+                Open any webpage and start writing in DevInks.
+              </p>
+            </div>
+          </div>
+
+          <aside
+            id="dashboard-ai-panel"
+            class="ai-panel"
+            aria-hidden="true"
+            hidden
+          >
+            <div class="ai-panel-header">
+              <h3 class="ai-panel-title">AI Insight</h3>
+              <button
+                id="dashboard-ai-close"
+                class="ai-panel-close"
+                type="button"
+                aria-label="Close AI insight panel"
+              >
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div id="dashboard-ai-message" class="ai-panel-message" hidden>
+              Enter a query to generate AI insight
+            </div>
+
+            <section id="dashboard-ai-answer-section" class="ai-section" hidden>
+              <div class="ai-card">
+                <div class="ai-answer-actions">
+                  <button
+                    id="dashboard-ai-copy"
+                    class="ai-copy-btn"
+                    type="button"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <div
+                  id="dashboard-ai-answer"
+                  class="ai-answer-text preview-rendered"
+                ></div>
+              </div>
+            </section>
+
+            <section
+              id="dashboard-ai-sources-section"
+              class="ai-section"
+              hidden
+            >
+              <div class="ai-card">
+                <div class="ai-section-header">
+                  <h4 class="ai-section-title">Sources</h4>
+                </div>
+                <ol id="dashboard-ai-sources" class="ai-sources-list"></ol>
+                <p
+                  id="dashboard-ai-sources-empty"
+                  class="ai-sources-empty"
+                  hidden
+                >
+                  No sources available.
+                </p>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </body>
 </html>
