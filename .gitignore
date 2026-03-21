@@ -5,3 +5,8 @@ test-results
 **/.DS_Store
 
 coverage/
+
+# Python cache files
+__pycache__/
+*.pyc
+backend/.venv/
