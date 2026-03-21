@@ -1,5 +1,5 @@
 import { NoteRepository } from './repositories/NoteRepository.js';
-import { semanticSearch, syncNote } from './services/ApiService.js';
+import { askAI, semanticSearch, syncNote } from './services/ApiService.js';
 import { getTotalNotes } from './services/MetricsService.js';
 import {
   finishSyncStatus,
@@ -132,6 +132,7 @@ async function renderDashboard() {
   const notesList = document.getElementById('notes-list');
   const searchInput = document.getElementById('dashboard-search');
   const searchStatus = document.getElementById('dashboard-search-status');
+  const askAiButton = document.getElementById('dashboard-ask-ai-btn');
   const syncProgress = document.getElementById('dashboard-sync-progress');
   const syncProgressFill = document.getElementById(
     'dashboard-sync-progress-fill',
@@ -142,10 +143,27 @@ async function renderDashboard() {
   const totalNotesMetric = document.getElementById('dashboard-total-notes');
   const resultsMetric = document.getElementById('dashboard-results-count');
   const metricsDivider = document.getElementById('dashboard-metrics-divider');
+  const aiPanel = document.getElementById('dashboard-ai-panel');
+  const aiPanelMessage = document.getElementById('dashboard-ai-message');
+  const aiPanelClose = document.getElementById('dashboard-ai-close');
+  const aiAnswerSection = document.getElementById(
+    'dashboard-ai-answer-section',
+  );
+  const aiAnswer = document.getElementById('dashboard-ai-answer');
+  const aiSourcesSection = document.getElementById(
+    'dashboard-ai-sources-section',
+  );
+  const aiSourcesList = document.getElementById('dashboard-ai-sources');
+  const aiSourcesEmpty = document.getElementById('dashboard-ai-sources-empty');
+  const aiCopyButton = document.getElementById('dashboard-ai-copy');
   let allNotes = [];
   let currentQuery = '';
   let debounceTimer;
   let latestSearchRequest = 0;
+  let latestAskRequest = 0;
+  let copyResetTimer;
+  let currentAiAnswerText = '';
+  let isAsking = false;
   let syncHideTimeout;
 
   function setSearchStatusMode(mode) {
@@ -169,6 +187,65 @@ async function renderDashboard() {
   async function refreshTotalNotesMetric() {
     const totalNotes = await getTotalNotes();
     totalNotesMetric.textContent = `Total Notes: ${totalNotes}`;
+  }
+
+  function setAskAiButtonLoading(loading) {
+    isAsking = loading;
+    askAiButton.disabled = loading;
+    askAiButton.textContent = loading ? 'Asking...' : 'Ask AI';
+  }
+
+  function openAiPanel() {
+    aiPanel.hidden = false;
+    aiPanel.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeAiPanel() {
+    aiPanel.hidden = true;
+    aiPanel.setAttribute('aria-hidden', 'true');
+  }
+
+  function resetCopyButton() {
+    window.clearTimeout(copyResetTimer);
+    aiCopyButton.textContent = 'Copy';
+  }
+
+  function showAiMessage(message) {
+    currentAiAnswerText = '';
+    aiPanelMessage.hidden = false;
+    aiPanelMessage.textContent = message;
+    aiAnswer.innerHTML = '';
+    aiAnswerSection.hidden = true;
+    aiSourcesSection.hidden = true;
+    aiSourcesList.innerHTML = '';
+    aiSourcesEmpty.hidden = true;
+    aiCopyButton.disabled = true;
+    resetCopyButton();
+  }
+
+  function renderAiInsight(answer, sources = []) {
+    currentAiAnswerText = answer || '';
+    aiPanelMessage.hidden = true;
+    aiAnswer.innerHTML = parseMarkdown(currentAiAnswerText);
+    aiAnswerSection.hidden = false;
+    aiSourcesSection.hidden = false;
+    aiSourcesList.innerHTML = '';
+    aiSourcesEmpty.hidden = sources.length > 0;
+    aiCopyButton.disabled = currentAiAnswerText.trim().length === 0;
+    resetCopyButton();
+
+    sources.forEach((source) => {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.className = 'ai-source-link';
+      link.href = source.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.title = source.url;
+      link.textContent = source.url;
+      item.appendChild(link);
+      aiSourcesList.appendChild(item);
+    });
   }
 
   function renderSyncProgress(state) {
@@ -286,6 +363,40 @@ async function renderDashboard() {
     }
   }
 
+  async function handleAskAi() {
+    if (isAsking) return;
+
+    const query = searchInput.value.trim();
+    openAiPanel();
+
+    if (!query) {
+      showAiMessage('Enter a query to generate AI insight');
+      return;
+    }
+
+    const requestId = ++latestAskRequest;
+    setAskAiButtonLoading(true);
+    showAiMessage('Generating insight...');
+
+    try {
+      const response = await askAI(query);
+      if (requestId !== latestAskRequest) return;
+
+      renderAiInsight(
+        response.answer || 'Unable to generate insight at the moment.',
+        response.sources || [],
+      );
+    } catch (error) {
+      if (requestId !== latestAskRequest) return;
+      console.error('Failed to generate AI insight:', error);
+      showAiMessage('Unable to generate insight at the moment.');
+    } finally {
+      if (requestId === latestAskRequest) {
+        setAskAiButtonLoading(false);
+      }
+    }
+  }
+
   try {
     const notes = await noteRepository.getAllNotes();
     allNotes = notes.filter(noteHasSearchableContent);
@@ -303,6 +414,29 @@ async function renderDashboard() {
       debounceTimer = window.setTimeout(async () => {
         await runSearch(nextQuery, requestId);
       }, 300);
+    });
+
+    askAiButton.addEventListener('click', () => {
+      void handleAskAi();
+    });
+
+    aiPanelClose.addEventListener('click', () => {
+      closeAiPanel();
+    });
+
+    aiCopyButton.addEventListener('click', async () => {
+      if (!currentAiAnswerText.trim()) return;
+
+      try {
+        await navigator.clipboard.writeText(currentAiAnswerText);
+        aiCopyButton.textContent = 'Copied';
+        window.clearTimeout(copyResetTimer);
+        copyResetTimer = window.setTimeout(() => {
+          aiCopyButton.textContent = 'Copy';
+        }, 1200);
+      } catch (error) {
+        console.error('Failed to copy AI answer:', error);
+      }
     });
 
     notesList.addEventListener('click', async (e) => {

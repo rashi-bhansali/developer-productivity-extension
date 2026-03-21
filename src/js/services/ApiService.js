@@ -41,6 +41,20 @@ export async function semanticSearch(query) {
   return response.json();
 }
 
+export async function askAI(query) {
+  const response = await fetch(`${API_BASE_URL}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ask AI failed with status ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function deleteSyncedNote(noteId) {
   try {
     const response = await fetch(

@@ -22,6 +22,12 @@ export function parseMarkdown(markdownText) {
       replacement: '<pre><code>$1</code></pre>',
     },
 
+    // Inline code
+    {
+      regex: /`([^`\n]+)`/g,
+      replacement: '<code>$1</code>',
+    },
+
     // Handle horizontal rules
     // Handle --- after a heading (horizontal rule case)
     { regex: /(\n?)\n?---\n/g, replacement: '\n<hr />\n' },
@@ -46,56 +52,66 @@ export function parseMarkdown(markdownText) {
   function handleLists(markdown) {
     const lines = markdown.split('\n');
     let html = '';
-    const stack = []; // Keeps track of current list levels
+    const stack = [];
+
+    function closeListsToIndent(indent, tag) {
+      while (stack.length > 0) {
+        const currentList = stack[stack.length - 1];
+        if (
+          currentList.indent > indent ||
+          (currentList.indent === indent && currentList.tag !== tag)
+        ) {
+          html += `</${stack.pop().tag}>`;
+          continue;
+        }
+        break;
+      }
+    }
+
+    function closeAllLists() {
+      while (stack.length > 0) {
+        html += `</${stack.pop().tag}>`;
+      }
+    }
 
     lines.forEach((line) => {
-      const headingMatch = line.match(/^(#{1,6})\s+(.*)/); // Match headings dynamically
-      const listMatch = line.match(/^(\s*)-\s+(.*)/);
+      const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
+      const unorderedListMatch = line.match(/^(\s*)(?:[-*+])\s+(.*)/);
+      const orderedListMatch = line.match(/^(\s*)\d+\.\s+(.*)/);
 
       if (headingMatch) {
-        const level = headingMatch[1].length; // Number of `#` determines heading level
+        const level = headingMatch[1].length;
         const content = headingMatch[2];
 
-        // Close any open lists before adding a heading
-        while (stack.length > 0) {
-          html += '</ul>';
-          stack.pop();
-        }
+        closeAllLists();
 
         html += `<h${level}>${content}</h${level}><br />`;
-      } else if (listMatch) {
-        const indent = listMatch[1].length; // Number of spaces determines nesting level
-        const content = listMatch[2];
+      } else if (unorderedListMatch || orderedListMatch) {
+        const isOrdered = Boolean(orderedListMatch);
+        const match = orderedListMatch || unorderedListMatch;
+        const indent = match[1].length;
+        const content = match[2];
+        const tag = isOrdered ? 'ol' : 'ul';
 
-        while (stack.length > 0 && stack[stack.length - 1] > indent) {
-          // Close deeper levels
-          html += '</ul>';
-          stack.pop();
+        closeListsToIndent(indent, tag);
+
+        if (
+          stack.length === 0 ||
+          stack[stack.length - 1].indent < indent ||
+          stack[stack.length - 1].tag !== tag
+        ) {
+          html += `<${tag}>`;
+          stack.push({ indent, tag });
         }
 
-        if (stack.length === 0 || stack[stack.length - 1] < indent) {
-          // Start a new nested list
-          html += '<ul>';
-          stack.push(indent);
-        }
-
-        // Add the list item
         html += `<li>${content}</li>`;
       } else {
-        // Close all remaining open lists when the line isn't a list
-        while (stack.length > 0) {
-          html += '</ul>';
-          stack.pop();
-        }
-        html += line + '\n'; // Non-list content, leave it unchanged
+        closeAllLists();
+        html += line + '\n';
       }
     });
 
-    // Close any remaining open lists at the end
-    while (stack.length > 0) {
-      html += '</ul>';
-      stack.pop();
-    }
+    closeAllLists();
 
     return html;
   }

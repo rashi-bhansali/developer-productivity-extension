@@ -13,6 +13,10 @@ class SearchIn(BaseModel):
     query: str
 
 
+class AskIn(BaseModel):
+    query: str
+
+
 class NoteMeta(BaseModel):
     id: str
     url: str
@@ -37,3 +41,13 @@ class SearchResult(BaseModel):
 
 class SearchOut(BaseModel):
     results: List[SearchResult]
+
+
+class AskSource(BaseModel):
+    id: str
+    url: str
+
+
+class AskOut(BaseModel):
+    answer: str
+    sources: List[AskSource]
