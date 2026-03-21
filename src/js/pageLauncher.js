@@ -1,5 +1,13 @@
 const HOST_ID = 'devinks-page-launcher-host';
 
+const isRuntimeAvailable = () => {
+  try {
+    return Boolean(chrome?.runtime?.id);
+  } catch {
+    return false;
+  }
+};
+
 if (window.top === window && !document.getElementById(HOST_ID)) {
   const host = document.createElement('div');
   host.id = HOST_ID;
@@ -30,8 +38,28 @@ if (window.top === window && !document.getElementById(HOST_ID)) {
   };
 
   launcher.addEventListener('click', () => {
+    if (!isRuntimeAvailable()) {
+      resetLauncherState();
+      host.remove();
+      console.warn('DevInks was reloaded. Refresh the page to re-enable it.');
+      return;
+    }
+
     launcher.classList.add('is-opening');
     window.setTimeout(resetLauncherState, 220);
-    chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' });
+
+    try {
+      chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' }, () => {
+        if (chrome.runtime.lastError) {
+          resetLauncherState();
+          console.warn(chrome.runtime.lastError.message);
+        }
+      });
+    } catch (error) {
+      resetLauncherState();
+      host.remove();
+      console.warn('DevInks was reloaded. Refresh the page to re-enable it.');
+      console.error(error);
+    }
   });
 }
