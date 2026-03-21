@@ -24,12 +24,25 @@
         <p class="dashboard-subtitle">All your notes, every website, one place.</p>
       </div>
 
+      <div class="dashboard-search">
+        <div class="search-input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+          <input
+            id="dashboard-search"
+            class="search-input"
+            type="search"
+            placeholder="Search by note content or URL"
+            autocomplete="off"
+          >
+        </div>
+      </div>
+
       <div id="notes-list"></div>
 
       <div id="empty-state" class="empty-state" style="display: none;">
         <i class="fa-regular fa-note-sticky empty-icon"></i>
-        <p>No notes yet.</p>
-        <p class="empty-sub">Open any webpage and start writing in DevInks.</p>
+        <p id="empty-state-title">No notes yet.</p>
+        <p id="empty-state-subtitle" class="empty-sub">Open any webpage and start writing in DevInks.</p>
       </div>
     </main>
   </div>

@@ -45,6 +45,56 @@ body.dark-mode header {
   text-align: center;
 }
 
+.dashboard-search {
+  margin-bottom: 20px;
+}
+
+.search-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.search-input-wrapper {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  color: #888;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px 10px 34px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(96, 179, 214, 0.14);
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
 .dashboard-title {
   font-family: 'Nunito', sans-serif;
   font-size: 1.6rem;
@@ -300,6 +350,21 @@ body.dark-mode header {
 /* ── Dark mode ── */
 body.dark-mode .dashboard-title { color: #e0e0e0; }
 body.dark-mode .dashboard-subtitle { color: #666; }
+body.dark-mode .search-label {
+  color: #e0e0e0;
+}
+body.dark-mode .search-icon {
+  color: #666;
+}
+body.dark-mode .search-input {
+  background: #1e1e1e;
+  border-color: #2f343b;
+  color: #e0e0e0;
+}
+
+body.dark-mode .search-input::placeholder {
+  color: #666;
+}
 
 body.dark-mode .note-card {
   background: #1e1e1e;

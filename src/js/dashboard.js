@@ -30,7 +30,7 @@ function formatDate(timestamp) {
  * Renders markdown to HTML, matching the extension's preview behaviour:
  * - Headings (h1–h3)
  * - Bold, italic, strikethrough, inline code
- * - Links → <a> with theme blue
+ * - Links -> <a> with theme blue
  * - Bullet lists (- or *)
  * - Horizontal rule ---
  * - Line breaks preserved
@@ -192,6 +192,36 @@ function renderNoteCard(note) {
   `;
 }
 
+function noteHasContent(note) {
+  return (
+    note.cells &&
+    note.cells.length > 0 &&
+    note.cells.some((cell) => cell.content && cell.content.trim())
+  );
+}
+
+function matchesSearch(note, query) {
+  if (!query) return true;
+
+  const normalizedQuery = query.toLowerCase();
+  const urlMatches = (note.url || '').toLowerCase().includes(normalizedQuery);
+  const contentMatches = (note.cells || []).some((cell) =>
+    (cell.content || '').toLowerCase().includes(normalizedQuery),
+  );
+
+  return urlMatches || contentMatches;
+}
+
+function setEmptyState(isVisible, title, subtitle) {
+  const emptyState = document.getElementById('empty-state');
+  const emptyStateTitle = document.getElementById('empty-state-title');
+  const emptyStateSubtitle = document.getElementById('empty-state-subtitle');
+
+  emptyState.style.display = isVisible ? 'flex' : 'none';
+  emptyStateTitle.textContent = title;
+  emptyStateSubtitle.textContent = subtitle;
+}
+
 async function handleDelete(url) {
   const confirmed = window.confirm(
     `Delete all notes for:\n${url}\n\nThis cannot be undone.`,
@@ -200,45 +230,73 @@ async function handleDelete(url) {
 
   try {
     await noteRepository.deleteNoteByUrl(url);
-    const card = document.querySelector(
-      `.note-card[data-url="${CSS.escape(url)}"]`,
-    );
-    if (card) card.remove();
-
-    if (document.querySelectorAll('.note-card').length === 0) {
-      document.getElementById('empty-state').style.display = 'flex';
-    }
+    return true;
   } catch (error) {
     console.error('Failed to delete note:', error);
     alert('Failed to delete. Please try again.');
+    return false;
   }
 }
 
 async function renderDashboard() {
   const notesList = document.getElementById('notes-list');
-  const emptyState = document.getElementById('empty-state');
+  const searchInput = document.getElementById('dashboard-search');
+  let allNotes = [];
+  let currentQuery = '';
+  let debounceTimer;
 
-  try {
-    const notes = await noteRepository.getAllNotes();
-
-    const nonEmptyNotes = notes.filter(
-      (note) =>
-        note.cells &&
-        note.cells.length > 0 &&
-        note.cells.some((cell) => cell.content && cell.content.trim()),
+  function renderNotes() {
+    const visibleNotes = allNotes.filter((note) =>
+      matchesSearch(note, currentQuery),
     );
 
-    if (nonEmptyNotes.length === 0) {
-      emptyState.style.display = 'flex';
+    if (visibleNotes.length === 0) {
+      notesList.innerHTML = '';
+
+      if (allNotes.length === 0) {
+        setEmptyState(
+          true,
+          'No notes yet.',
+          'Open any webpage and start writing in DevInks.',
+        );
+      } else {
+        setEmptyState(
+          true,
+          'No matching notes.',
+          'Try a different keyword or URL.',
+        );
+      }
       return;
     }
 
-    notesList.innerHTML = nonEmptyNotes.map(renderNoteCard).join('');
+    setEmptyState(false, '', '');
+    notesList.innerHTML = visibleNotes.map(renderNoteCard).join('');
+  }
 
-    notesList.addEventListener('click', (e) => {
+  try {
+    const notes = await noteRepository.getAllNotes();
+    allNotes = notes.filter(noteHasContent);
+
+    renderNotes();
+
+    searchInput.addEventListener('input', (event) => {
+      const nextQuery = event.target.value.trim().toLowerCase();
+      window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(() => {
+        currentQuery = nextQuery;
+        renderNotes();
+      }, 300);
+    });
+
+    notesList.addEventListener('click', async (e) => {
       const btn = e.target.closest('.delete-note-btn');
       if (!btn) return;
-      handleDelete(btn.dataset.url);
+
+      const didDelete = await handleDelete(btn.dataset.url);
+      if (!didDelete) return;
+
+      allNotes = allNotes.filter((note) => note.url !== btn.dataset.url);
+      renderNotes();
     });
   } catch (error) {
     console.error('Failed to load notes:', error);
