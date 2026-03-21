@@ -1,6 +1,7 @@
 import { NoteRepository } from './repositories/NoteRepository.js';
 import { askAI, semanticSearch, syncNote } from './services/ApiService.js';
 import { getTotalNotes } from './services/MetricsService.js';
+import { exportNotesAsPdf } from './services/PdfExportService.js';
 import {
   finishSyncStatus,
   getSyncState,
@@ -15,6 +16,7 @@ import {
   normalizeSearchQuery,
   noteHasSearchableContent,
 } from './utils/dashboardSearch.js';
+import { sortNotes } from './utils/dashboardSort.js';
 
 const noteRepository = new NoteRepository();
 
@@ -133,6 +135,9 @@ async function renderDashboard() {
   const searchInput = document.getElementById('dashboard-search');
   const searchStatus = document.getElementById('dashboard-search-status');
   const askAiButton = document.getElementById('dashboard-ask-ai-btn');
+  const exportPdfButton = document.getElementById('dashboard-export-pdf-btn');
+  const exportStatus = document.getElementById('dashboard-export-status');
+  const exportContainer = document.getElementById('export-container');
   const syncProgress = document.getElementById('dashboard-sync-progress');
   const syncProgressFill = document.getElementById(
     'dashboard-sync-progress-fill',
@@ -143,6 +148,10 @@ async function renderDashboard() {
   const totalNotesMetric = document.getElementById('dashboard-total-notes');
   const resultsMetric = document.getElementById('dashboard-results-count');
   const metricsDivider = document.getElementById('dashboard-metrics-divider');
+  const sortControl = document.getElementById('dashboard-sort-control');
+  const sortToggle = document.getElementById('dashboard-sort-toggle');
+  const sortLabel = document.getElementById('dashboard-sort-label');
+  const sortMenu = document.getElementById('dashboard-sort-menu');
   const aiPanel = document.getElementById('dashboard-ai-panel');
   const aiPanelMessage = document.getElementById('dashboard-ai-message');
   const aiPanelClose = document.getElementById('dashboard-ai-close');
@@ -162,9 +171,14 @@ async function renderDashboard() {
   let latestSearchRequest = 0;
   let latestAskRequest = 0;
   let copyResetTimer;
+  let exportStatusTimer;
   let currentAiAnswerText = '';
+  let currentBaseVisibleNotes = [];
+  let currentVisibleNotes = [];
   let isAsking = false;
+  let isExporting = false;
   let syncHideTimeout;
+  let sortOrder = 'desc';
 
   function setSearchStatusMode(mode) {
     searchStatus.className = `search-status ${mode}`;
@@ -193,6 +207,45 @@ async function renderDashboard() {
     isAsking = loading;
     askAiButton.disabled = loading;
     askAiButton.textContent = loading ? 'Asking...' : 'Ask AI';
+  }
+
+  function setExportButtonLoading(loading) {
+    isExporting = loading;
+    exportPdfButton.disabled = loading;
+    exportPdfButton.textContent = loading ? 'Exporting...' : 'Export PDF';
+  }
+
+  function showExportStatus(message) {
+    window.clearTimeout(exportStatusTimer);
+    exportStatus.hidden = false;
+    exportStatus.textContent = message;
+    exportStatusTimer = window.setTimeout(() => {
+      exportStatus.hidden = true;
+      exportStatus.textContent = '';
+    }, 2200);
+  }
+
+  function renderSortControls() {
+    const isMenuOpen = !sortMenu.hidden;
+
+    sortLabel.textContent =
+      sortOrder === 'asc' ? 'Oldest First' : 'Newest First';
+    sortToggle.setAttribute('aria-expanded', String(isMenuOpen));
+
+    Array.from(sortMenu.querySelectorAll('.sort-option')).forEach((option) => {
+      const isActive = option.dataset.sortOrder === sortOrder;
+      option.classList.toggle('sort-option-active', isActive);
+    });
+  }
+
+  function closeSortMenu() {
+    sortMenu.hidden = true;
+    renderSortControls();
+  }
+
+  function toggleSortMenu() {
+    sortMenu.hidden = !sortMenu.hidden;
+    renderSortControls();
   }
 
   function openAiPanel() {
@@ -278,9 +331,11 @@ async function renderDashboard() {
   function renderNotes(
     visibleNotes = filterNotesByKeyword(allNotes, currentQuery),
   ) {
-    renderResultsMetric(visibleNotes.length);
+    currentBaseVisibleNotes = [...visibleNotes];
+    currentVisibleNotes = sortNotes(visibleNotes, sortOrder);
+    renderResultsMetric(currentVisibleNotes.length);
 
-    if (visibleNotes.length === 0) {
+    if (currentVisibleNotes.length === 0) {
       notesList.innerHTML = '';
 
       if (allNotes.length === 0) {
@@ -300,7 +355,7 @@ async function renderDashboard() {
     }
 
     setEmptyState(false, '', '');
-    notesList.innerHTML = visibleNotes.map(renderNoteCard).join('');
+    notesList.innerHTML = currentVisibleNotes.map(renderNoteCard).join('');
   }
 
   async function runSearch(query, requestId = latestSearchRequest) {
@@ -397,6 +452,35 @@ async function renderDashboard() {
     }
   }
 
+  async function handleExportPdf() {
+    if (isExporting) return;
+
+    const latestNotes = (await noteRepository.getAllNotes()).filter(
+      noteHasSearchableContent,
+    );
+    const notesByUrl = new Map(latestNotes.map((note) => [note.url, note]));
+    const notesToExport = currentVisibleNotes
+      .map((note) => notesByUrl.get(note.url))
+      .filter(Boolean);
+
+    if (notesToExport.length === 0) {
+      showExportStatus('No notes available to export');
+      return;
+    }
+
+    setExportButtonLoading(true);
+
+    try {
+      await exportNotesAsPdf(notesToExport, exportContainer);
+    } catch (error) {
+      console.error('Failed to export notes as PDF:', error);
+      showExportStatus('Unable to export notes right now');
+    } finally {
+      exportContainer.innerHTML = '';
+      setExportButtonLoading(false);
+    }
+  }
+
   try {
     const notes = await noteRepository.getAllNotes();
     allNotes = notes.filter(noteHasSearchableContent);
@@ -406,6 +490,7 @@ async function renderDashboard() {
 
     renderNotes();
     void syncExistingNotes(allNotes);
+    renderSortControls();
 
     searchInput.addEventListener('input', (event) => {
       const nextQuery = normalizeSearchQuery(event.target.value);
@@ -418,6 +503,36 @@ async function renderDashboard() {
 
     askAiButton.addEventListener('click', () => {
       void handleAskAi();
+    });
+
+    exportPdfButton.addEventListener('click', () => {
+      void handleExportPdf();
+    });
+
+    sortToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleSortMenu();
+    });
+
+    sortMenu.addEventListener('click', (event) => {
+      const option = event.target.closest('.sort-option');
+      if (!option) return;
+
+      const nextSortOrder = option.dataset.sortOrder;
+      if (!nextSortOrder || nextSortOrder === sortOrder) {
+        closeSortMenu();
+        return;
+      }
+
+      sortOrder = nextSortOrder;
+      closeSortMenu();
+      renderNotes(currentBaseVisibleNotes);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!sortControl.contains(event.target)) {
+        closeSortMenu();
+      }
     });
 
     aiPanelClose.addEventListener('click', () => {

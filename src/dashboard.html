@@ -73,13 +73,64 @@
             </div>
           </div>
           <div class="dashboard-metrics">
-            <span id="dashboard-total-notes">Total Notes: 0</span>
-            <span
-              id="dashboard-metrics-divider"
-              class="dashboard-metrics-divider"
-              >|</span
-            >
-            <span id="dashboard-results-count">Results: 0</span>
+            <div class="dashboard-metrics-left">
+              <span id="dashboard-total-notes">Total Notes: 0</span>
+              <span
+                id="dashboard-metrics-divider"
+                class="dashboard-metrics-divider"
+                >|</span
+              >
+              <span id="dashboard-results-count">Results: 0</span>
+            </div>
+            <div class="dashboard-metrics-right">
+              <div id="dashboard-sort-control" class="dashboard-sort-control">
+                <button
+                  id="dashboard-sort-toggle"
+                  class="sort-toggle-btn"
+                  type="button"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                >
+                  <span class="sort-toggle-icon" aria-hidden="true">↕</span>
+                  <span id="dashboard-sort-label">Newest First</span>
+                </button>
+                <div
+                  id="dashboard-sort-menu"
+                  class="sort-menu"
+                  role="menu"
+                  hidden
+                >
+                  <button
+                    class="sort-option sort-option-active"
+                    type="button"
+                    data-sort-order="desc"
+                    role="menuitem"
+                  >
+                    Newest First
+                  </button>
+                  <button
+                    class="sort-option"
+                    type="button"
+                    data-sort-order="asc"
+                    role="menuitem"
+                  >
+                    Oldest First
+                  </button>
+                </div>
+              </div>
+              <button
+                id="dashboard-export-pdf-btn"
+                class="export-pdf-btn"
+                type="button"
+              >
+                Export PDF
+              </button>
+              <span
+                id="dashboard-export-status"
+                class="export-status"
+                hidden
+              ></span>
+            </div>
           </div>
         </div>
 
@@ -157,6 +208,12 @@
             </section>
           </aside>
         </div>
+
+        <div
+          id="export-container"
+          class="export-container"
+          aria-hidden="true"
+        ></div>
       </main>
     </div>
   </body>
